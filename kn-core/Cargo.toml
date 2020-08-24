@@ -5,3 +5,4 @@ authors = ["Colin Woodbury <colin@fosskers.ca>"]
 edition = "2018"
 
 [dependencies]
+kanji = "1.0"
