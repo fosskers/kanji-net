@@ -1,12 +1,10 @@
 //! Core types and functions for KanjiNet.
 
-/// Wrapper around a library type so that we can give it additional trait
-/// implementations.
-pub struct Kanji(pub kanji::Kanji);
-
-// TODO Give `Kanji` serde instances via a feature flag.
+use kanji::Kanji;
+use serde::{Deserialize, Serialize};
 
 /// An entry in the kanji database.
+#[derive(Serialize, Deserialize)]
 pub struct Entry {
     pub kanji: Kanji,
     pub oya: Vec<Kanji>,
