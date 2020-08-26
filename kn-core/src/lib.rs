@@ -6,9 +6,28 @@ use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::path::Path;
 
+#[derive(Debug)]
 pub enum Error {
     IO(std::io::Error),
     JSON(serde_json::Error),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::IO(e) => e.fmt(f),
+            Error::JSON(e) => e.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::IO(e) => Some(e),
+            Error::JSON(e) => Some(e),
+        }
+    }
 }
 
 /// An entry in the kanji database.
@@ -33,6 +52,7 @@ pub fn open_db(path: &Path) -> Result<HashMap<Kanji, Entry>, Error> {
     Ok(hm)
 }
 
+/// Write a Kanji "database" into a file by order of its `Kanji`.
 pub fn write_db(path: &Path, mut hm: HashMap<Kanji, Entry>) -> Result<(), Error> {
     let file = OpenOptions::new()
         .write(true)
