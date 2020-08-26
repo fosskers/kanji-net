@@ -1,6 +1,6 @@
 //! Core types and functions for KanjiNet.
 
-use kanji::Kanji;
+pub use kanji::Kanji;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
