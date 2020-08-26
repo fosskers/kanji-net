@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::path::Path;
 
+/// A wrapper for the various lower-level errors than can occur.
 #[derive(Debug)]
 pub enum Error {
     IO(std::io::Error),

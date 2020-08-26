@@ -5,7 +5,6 @@ authors = ["Colin Woodbury <colin@fosskers.ca>"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
 gumdrop = "0.8"
 kn-core = { path = "../kn-core" }
 

@@ -1,5 +1,5 @@
 use gumdrop::{Options, ParsingStyle};
-use kn_core::Entry;
+use kn_core::{Entry, Error};
 
 #[derive(Options)]
 struct Args {
@@ -10,11 +10,11 @@ struct Args {
     version: bool,
 
     /// Path to the Kanji data file.
-    #[options(free, required)]
-    data_path: String,
+    #[options(meta = "PATH", default = "data.json")]
+    data: String,
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<(), Error> {
     let args = Args::parse_args_or_exit(ParsingStyle::AllOptions);
 
     if args.version {
