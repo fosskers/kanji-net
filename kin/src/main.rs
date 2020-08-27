@@ -1,6 +1,6 @@
 use gumdrop::{Options, ParsingStyle};
 use kn_core::{Entry, Error, Kanji};
-use std::io::{self, Write};
+use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
 
 #[derive(Options)]
@@ -43,18 +43,50 @@ fn work(path: &Path) -> Result<(), Error> {
 fn kanji_prompt() -> Result<Entry, Error> {
     let in_handle = io::stdin();
     let mut out_handle = io::stdout();
-    let mut line = String::new();
-    print!("Kanji: ");
-    out_handle.flush().map_err(Error::IO)?;
-    in_handle.read_line(&mut line).map_err(Error::IO)?;
 
-    let kanji = Kanji::new(line.chars().next().unwrap()).unwrap();
+    let kanji = get_legal_kanji(&in_handle, &mut out_handle, "漢字")?;
+    let oya = get_line(&in_handle, &mut out_handle, "親")?
+        .split_whitespace()
+        .filter_map(|s| s.chars().next())
+        .filter_map(Kanji::new)
+        .collect();
+    let onyomi = get_line(&in_handle, &mut out_handle, "音読み")?
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect();
+
     let entry = Entry {
         kanji,
-        oya: vec![],
-        onyomi: vec![],
+        oya,
+        onyomi,
         imi: vec![],
     };
 
     Ok(entry)
+}
+
+fn get_line(in_handle: &Stdin, out_handle: &mut Stdout, label: &str) -> Result<String, Error> {
+    let mut line = String::new();
+    print!("{}: ", label);
+    out_handle.flush().map_err(Error::IO)?;
+    in_handle.read_line(&mut line).map_err(Error::IO)?;
+    Ok(line.trim_end().to_string())
+}
+
+/// Loop on the input of legal Kanji.
+fn get_legal_kanji(
+    in_handle: &Stdin,
+    out_handle: &mut Stdout,
+    label: &str,
+) -> Result<Kanji, Error> {
+    let line = get_line(in_handle, out_handle, label)?;
+    let mut chars = line.chars();
+
+    match chars.next().and_then(Kanji::new) {
+        Some(k) => Ok(k),
+        _ => {
+            println!("Invalid input! Try again.");
+            get_legal_kanji(in_handle, out_handle, label)
+        }
+    }
 }
