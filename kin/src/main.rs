@@ -1,5 +1,6 @@
 use gumdrop::{Options, ParsingStyle};
 use kn_core::{Entry, Error, Kanji};
+use std::collections::{HashMap, HashSet};
 use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
 
@@ -30,7 +31,7 @@ fn main() -> Result<(), Error> {
 
 fn work(path: &Path) -> Result<(), Error> {
     let mut data = kn_core::open_db(path)?;
-    let entry = kanji_prompt()?;
+    let entry = kanji_prompt(&data)?;
     let kanji = entry.kanji;
 
     match data.insert(kanji, entry) {
@@ -40,16 +41,28 @@ fn work(path: &Path) -> Result<(), Error> {
 }
 
 /// Prompt the user for the fields of an `Entry` to add to the database.
-fn kanji_prompt() -> Result<Entry, Error> {
+fn kanji_prompt(data: &HashMap<Kanji, Entry>) -> Result<Entry, Error> {
     let in_handle = io::stdin();
     let mut out_handle = io::stdout();
 
-    let kanji = get_legal_kanji(&in_handle, &mut out_handle, "漢字")?;
-    let oya = get_line(&in_handle, &mut out_handle, "親")?
+    let oya: HashSet<Kanji> = get_line(&in_handle, &mut out_handle, "親")?
         .split_whitespace()
         .filter_map(|s| s.chars().next())
         .filter_map(Kanji::new)
         .collect();
+
+    let children: String = data
+        .values()
+        .filter(|v| !v.oya.is_disjoint(&oya))
+        .map(|v| v.kanji.get())
+        .collect();
+
+    if !children.is_empty() {
+        println!("Children of those parents:");
+        println!("  {}", children);
+    }
+
+    let kanji = get_legal_kanji(&in_handle, &mut out_handle, "漢字")?;
     let onyomi = get_line(&in_handle, &mut out_handle, "音読み")?
         .split_whitespace()
         .map(|s| s.to_string())

@@ -2,7 +2,7 @@
 
 pub use kanji::Kanji;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, OpenOptions};
 use std::path::Path;
 
@@ -41,8 +41,8 @@ impl std::error::Error for Error {
 #[derive(Serialize, Deserialize)]
 pub struct Entry {
     pub kanji: Kanji,
-    pub oya: Vec<Kanji>,
-    pub onyomi: Vec<String>,
+    pub oya: HashSet<Kanji>,
+    pub onyomi: HashSet<String>,
     pub imi: Vec<(String, String)>,
 }
 
