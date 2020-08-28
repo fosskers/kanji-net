@@ -1,6 +1,7 @@
 use gumdrop::{Options, ParsingStyle};
 use kn_core::{Entry, Error, Kanji, DB};
-use std::collections::{HashMap, HashSet};
+use petgraph::dot::{Config, Dot};
+use std::collections::HashSet;
 use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
 
@@ -15,21 +16,41 @@ struct Args {
     /// Path to the Kanji data file.
     #[options(meta = "PATH", default = "data.json")]
     data: PathBuf,
+
+    #[options(command)]
+    command: Option<Command>,
 }
+
+#[derive(Options)]
+enum Command {
+    /// Add a new entry to the database.
+    New(New),
+    /// Output the content of the Kanji Graph in Dot format.
+    Graph(Graph),
+}
+
+#[derive(Options)]
+struct New {}
+
+#[derive(Options)]
+struct Graph {}
 
 fn main() -> Result<(), Error> {
     let args = Args::parse_args_or_exit(ParsingStyle::AllOptions);
 
-    if args.version {
-        let version = env!("CARGO_PKG_VERSION");
-        println!("{}", version);
-        Ok(())
-    } else {
-        work(&args.data)
+    match args.command {
+        _ if args.version => {
+            let version = env!("CARGO_PKG_VERSION");
+            println!("{}", version);
+            Ok(())
+        }
+        Some(Command::New(_)) => new_entry(&args.data),
+        Some(Command::Graph(_)) => graph_dot(&args.data),
+        None => Ok(()),
     }
 }
 
-fn work(path: &Path) -> Result<(), Error> {
+fn new_entry(path: &Path) -> Result<(), Error> {
     let mut db = kn_core::open_db(path)?;
     let entry = kanji_prompt(&db)?;
     let kanji = entry.kanji;
@@ -102,4 +123,10 @@ fn get_legal_kanji(
             get_legal_kanji(in_handle, out_handle, label)
         }
     }
+}
+
+fn graph_dot(path: &Path) -> Result<(), Error> {
+    let db = kn_core::open_db(path)?;
+    println!("{:?}", Dot::with_config(&db.graph, &[Config::EdgeNoLabel]));
+    Ok(())
 }
