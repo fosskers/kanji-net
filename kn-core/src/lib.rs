@@ -59,11 +59,13 @@ impl DB {
 
         // Add edges.
         for e in entries.values() {
+            // Safe unwrap, since we definitely added every `Kanji` key to the
+            // `index` HashMap.
+            let child = index.get(&e.kanji).unwrap();
             e.oya
                 .iter()
                 .filter_map(|o| {
                     let oya = index.get(o)?;
-                    let child = index.get(&e.kanji)?; // TODO May be possible to avoid this lookup.
                     Some((oya, child))
                 })
                 .for_each(|(o, c)| {
