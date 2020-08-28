@@ -115,8 +115,11 @@ impl DB {
 #[derive(Serialize, Deserialize)]
 pub struct Entry {
     pub kanji: Kanji,
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub oya: HashSet<Kanji>,
+    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub onyomi: HashSet<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub imi: Vec<(String, String)>,
 }
 
