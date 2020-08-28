@@ -54,10 +54,13 @@ impl DB {
     /// `u16` entries, which it never will.
     pub fn new(entries: HashMap<Kanji, Entry>) -> DB {
         let mut graph: Graph<Kanji, (), Directed, u16> = Graph::default();
+
+        // Add all nodes to the graph.
         let index: HashMap<Kanji, NodeIndex<u16>> =
             entries.keys().map(|k| (*k, graph.add_node(*k))).collect();
 
-        // Add edges.
+        // Add all edges to the graph, where parents have directed edges to
+        // their children.
         for e in entries.values() {
             // Safe unwrap, since we definitely added every `Kanji` key to the
             // `index` HashMap.
