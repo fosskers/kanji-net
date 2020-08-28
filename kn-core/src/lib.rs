@@ -1,6 +1,7 @@
 //! Core types and functions for KanjiNet.
 
 pub use kanji::Kanji;
+use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, OpenOptions};
@@ -37,6 +38,47 @@ impl std::error::Error for Error {
     }
 }
 
+/// An in-memory database for querying `Kanji` data.
+pub struct DB {
+    pub entries: HashMap<Kanji, Entry>,
+    pub index: HashMap<Kanji, NodeIndex<u16>>,
+    pub graph: Graph<Kanji, (), Directed, u16>,
+}
+
+impl DB {
+    /// Create a new `DB` from a freshly read source of entries.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `Graph::add_node` panics, namely if the `HashMap` has over
+    /// `u16` entries, which it never will.
+    pub fn new(entries: HashMap<Kanji, Entry>) -> DB {
+        let mut graph: Graph<Kanji, (), Directed, u16> = Graph::default();
+        let index: HashMap<Kanji, NodeIndex<u16>> =
+            entries.keys().map(|k| (*k, graph.add_node(*k))).collect();
+
+        // Add edges.
+        for e in entries.values() {
+            e.oya
+                .iter()
+                .filter_map(|o| {
+                    let oya = index.get(o)?;
+                    let child = index.get(&e.kanji)?; // TODO May be possible to avoid this lookup.
+                    Some((oya, child))
+                })
+                .for_each(|(o, c)| {
+                    graph.add_edge(*o, *c, ());
+                });
+        }
+
+        DB {
+            entries,
+            index,
+            graph,
+        }
+    }
+}
+
 /// An entry in the kanji database.
 #[derive(Serialize, Deserialize)]
 pub struct Entry {
@@ -47,7 +89,7 @@ pub struct Entry {
 }
 
 /// Open a data file and bring the whole "database" into memory.
-pub fn open_db(path: &Path) -> Result<HashMap<Kanji, Entry>, Error> {
+pub fn open_db(path: &Path) -> Result<DB, Error> {
     let raw = fs::read_to_string(path).map_err(Error::IO)?;
     let ks: Vec<Entry> = serde_json::from_str(&raw).map_err(Error::JSON)?;
     let mut hm = HashMap::new();
@@ -56,17 +98,21 @@ pub fn open_db(path: &Path) -> Result<HashMap<Kanji, Entry>, Error> {
         hm.insert(e.kanji, e);
     });
 
-    Ok(hm)
+    Ok(DB::new(hm))
 }
 
 /// Write a Kanji "database" into a file by order of its `Kanji`.
-pub fn write_db(path: &Path, mut hm: HashMap<Kanji, Entry>) -> Result<(), Error> {
+pub fn write_db(path: &Path, db: DB) -> Result<(), Error> {
     let file = OpenOptions::new()
         .write(true)
         .create(true)
         .open(path)
         .map_err(Error::IO)?;
-    let mut entries = hm.drain().map(|(_, v)| v).collect::<Vec<Entry>>();
+    let mut entries = db
+        .entries
+        .into_iter()
+        .map(|(_, v)| v)
+        .collect::<Vec<Entry>>();
     entries.sort_by_key(|e| e.kanji);
     serde_json::to_writer_pretty(file, &entries).map_err(Error::JSON)
 }
