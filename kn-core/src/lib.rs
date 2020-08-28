@@ -92,11 +92,7 @@ pub struct Entry {
 pub fn open_db(path: &Path) -> Result<DB, Error> {
     let raw = fs::read_to_string(path).map_err(Error::IO)?;
     let ks: Vec<Entry> = serde_json::from_str(&raw).map_err(Error::JSON)?;
-    let mut hm = HashMap::new();
-
-    ks.into_iter().for_each(|e| {
-        hm.insert(e.kanji, e);
-    });
+    let hm = ks.into_iter().map(|e| (e.kanji, e)).collect();
 
     Ok(DB::new(hm))
 }
