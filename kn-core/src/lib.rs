@@ -4,6 +4,7 @@ pub use kanji::Kanji;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::path::Path;
 
@@ -38,11 +39,37 @@ impl std::error::Error for Error {
     }
 }
 
+/// The relationship between parents and children, in terms of their readings.
+pub enum Inheritance {
+    /// The child is the exact same as the parent. (e.g. こく→こく)
+    Same,
+    /// The child is a voicing variant of the parent. (e.g. こく→ごく)
+    Voicing,
+    /// The first consonant of the child is at least the same as the parent. (e.g. こく→けい)
+    Consonant,
+    /// The child rhymes with the the parent. (e.g. こく→よく)
+    Rhymes,
+    /// The child bares no resemblance to the parent. (e.g. こく→よう)
+    Differ,
+}
+
+impl fmt::Display for Inheritance {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Inheritance::Same => write!(f, "Same"),
+            Inheritance::Voicing => write!(f, "Voicing"),
+            Inheritance::Consonant => write!(f, "Consonant"),
+            Inheritance::Rhymes => write!(f, "Rhymes"),
+            Inheritance::Differ => write!(f, "Differ"),
+        }
+    }
+}
+
 /// An in-memory database for querying `Kanji` data.
 pub struct DB {
     pub entries: HashMap<Kanji, Entry>,
     pub index: HashMap<Kanji, NodeIndex<u16>>,
-    pub graph: Graph<Kanji, (), Directed, u16>,
+    pub graph: Graph<Kanji, Inheritance, Directed, u16>,
 }
 
 impl DB {
@@ -53,7 +80,7 @@ impl DB {
     /// Will panic if `Graph::add_node` panics, namely if the `HashMap` has over
     /// `u16` entries, which it never will.
     pub fn new(entries: HashMap<Kanji, Entry>) -> DB {
-        let mut graph: Graph<Kanji, (), Directed, u16> = Graph::default();
+        let mut graph: Graph<Kanji, Inheritance, Directed, u16> = Graph::default();
 
         // Add all nodes to the graph.
         let index: HashMap<Kanji, NodeIndex<u16>> =
@@ -72,7 +99,7 @@ impl DB {
                     Some((oya, child))
                 })
                 .for_each(|(o, c)| {
-                    graph.add_edge(*o, *c, ());
+                    graph.add_edge(*o, *c, Inheritance::Differ); // TODO Make proper inheritance.
                 });
         }
 
