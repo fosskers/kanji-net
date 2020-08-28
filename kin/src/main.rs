@@ -127,6 +127,6 @@ fn get_legal_kanji(
 
 fn graph_dot(path: &Path) -> Result<(), Error> {
     let db = kn_core::open_db(path)?;
-    println!("{:?}", Dot::with_config(&db.graph, &[Config::EdgeNoLabel]));
+    println!("{}", Dot::with_config(&db.graph, &[Config::EdgeNoLabel]));
     Ok(())
 }
