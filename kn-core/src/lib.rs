@@ -121,8 +121,10 @@ impl DB {
                     Some((oya, oix, cix))
                 })
                 .for_each(|(oya, oix, cix)| {
-                    let inherit = if e.onyomi == oya.onyomi {
+                    let inherit = if e.onyomi.get(0) == oya.onyomi.get(0) {
                         Inheritance::Same
+                    } else if e.onyomi.iter().any(|on| Some(on) == oya.onyomi.get(0)) {
+                        Inheritance::Secondary
                     } else {
                         Inheritance::Differ
                     };
