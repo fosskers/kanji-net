@@ -49,8 +49,6 @@ pub enum Inheritance {
     Voicing,
     /// The first consonant of the child is at least the same as the parent. (e.g. こく→けい)
     Consonant,
-    /// The child rhymes with the the parent. (e.g. こく→よく)
-    Rhymes,
     /// The child bares no resemblance to the parent. (e.g. こく→よう)
     Differ,
     /// The child has no 音読み, which occurs often with 国字.
@@ -65,7 +63,6 @@ impl Inheritance {
             Inheritance::Secondary => "color=greenyellow".to_string(),
             Inheritance::Voicing => "color=yellow".to_string(),
             Inheritance::Consonant => "color=orange".to_string(),
-            Inheritance::Rhymes => "color=orangered".to_string(),
             Inheritance::Differ => "color=red".to_string(),
             Inheritance::None => "".to_string(),
         }
@@ -79,7 +76,6 @@ impl fmt::Display for Inheritance {
             Inheritance::Secondary => write!(f, "Secondary"),
             Inheritance::Voicing => write!(f, "Voicing"),
             Inheritance::Consonant => write!(f, "Consonant"),
-            Inheritance::Rhymes => write!(f, "Rhymes"),
             Inheritance::Differ => write!(f, "Differ"),
             Inheritance::None => write!(f, "None"),
         }
