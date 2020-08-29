@@ -125,7 +125,7 @@ fn get_legal_kanji(
     }
 }
 
-// TODO Customize output to show edge colours based on `Inheritance`.
+// TODO Customize output to show edge colours based on `Inherit`.
 fn graph_dot(path: &Path) -> Result<(), Error> {
     let db = kn_core::open_db(path)?;
     let dot = Dot::with_attr_getters(

@@ -1,5 +1,7 @@
 //! Core types and functions for KanjiNet.
 
+mod utils;
+
 pub use kanji::Kanji;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -40,11 +42,11 @@ impl std::error::Error for Error {
 }
 
 /// The relationship between parents and children, in terms of their readings.
-pub enum Inheritance {
+pub enum Inherit {
     /// The child is the exact same as the parent. (e.g. こく→こく)
     Same,
     /// A secondary reading of the child is the same as the parent.
-    Secondary,
+    Second,
     /// The child is a voicing variant of the parent. (e.g. こく→ごく)
     Voicing,
     /// The first consonant of the child is at least the same as the parent. (e.g. こく→けい)
@@ -55,29 +57,29 @@ pub enum Inheritance {
     None,
 }
 
-impl Inheritance {
-    // TODO These can be RGB!
+impl Inherit {
+    // TODO These can be RGB! Make these nice pastels or something.
     pub fn to_dot_attr(&self) -> String {
         match self {
-            Inheritance::Same => "color=green".to_string(),
-            Inheritance::Secondary => "color=greenyellow".to_string(),
-            Inheritance::Voicing => "color=yellow".to_string(),
-            Inheritance::Consonant => "color=orange".to_string(),
-            Inheritance::Differ => "color=red".to_string(),
-            Inheritance::None => "".to_string(),
+            Inherit::Same => "color=green".to_string(),
+            Inherit::Second => "color=greenyellow".to_string(),
+            Inherit::Voicing => "color=yellow".to_string(),
+            Inherit::Consonant => "color=orange".to_string(),
+            Inherit::Differ => "color=red".to_string(),
+            Inherit::None => "color=gray".to_string(),
         }
     }
 }
 
-impl fmt::Display for Inheritance {
+impl fmt::Display for Inherit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Inheritance::Same => write!(f, "Same"),
-            Inheritance::Secondary => write!(f, "Secondary"),
-            Inheritance::Voicing => write!(f, "Voicing"),
-            Inheritance::Consonant => write!(f, "Consonant"),
-            Inheritance::Differ => write!(f, "Differ"),
-            Inheritance::None => write!(f, "None"),
+            Inherit::Same => write!(f, "Same"),
+            Inherit::Second => write!(f, "Second"),
+            Inherit::Voicing => write!(f, "Voicing"),
+            Inherit::Consonant => write!(f, "Consonant"),
+            Inherit::Differ => write!(f, "Differ"),
+            Inherit::None => write!(f, "None"),
         }
     }
 }
@@ -86,7 +88,7 @@ impl fmt::Display for Inheritance {
 pub struct DB {
     pub entries: HashMap<Kanji, Entry>,
     pub index: HashMap<Kanji, NodeIndex<u16>>,
-    pub graph: Graph<Kanji, Inheritance, Directed, u16>,
+    pub graph: Graph<Kanji, Inherit, Directed, u16>,
 }
 
 impl DB {
@@ -97,7 +99,7 @@ impl DB {
     /// Will panic if `Graph::add_node` panics, namely if the `HashMap` has over
     /// `u16` entries, which it never will.
     pub fn new(entries: HashMap<Kanji, Entry>) -> DB {
-        let mut graph: Graph<Kanji, Inheritance, Directed, u16> = Graph::default();
+        let mut graph: Graph<Kanji, Inherit, Directed, u16> = Graph::default();
 
         // Add all nodes to the graph.
         let index: HashMap<Kanji, NodeIndex<u16>> =
@@ -117,12 +119,12 @@ impl DB {
                     Some((oya, oix, cix))
                 })
                 .for_each(|(oya, oix, cix)| {
-                    let inherit = if e.onyomi.get(0) == oya.onyomi.get(0) {
-                        Inheritance::Same
-                    } else if e.onyomi.iter().any(|on| Some(on) == oya.onyomi.get(0)) {
-                        Inheritance::Secondary
-                    } else {
-                        Inheritance::Differ
+                    let inherit = match (e.onyomi.get(0), oya.onyomi.get(0)) {
+                        (Some(a), Some(b)) if a == b => Inherit::Same,
+                        (Some(a), Some(b)) if utils::is_voiced_pair(a, b) => Inherit::Voicing,
+                        (Some(_), Some(b)) if e.onyomi.iter().any(|on| on == b) => Inherit::Second,
+                        (Some(_), Some(_)) => Inherit::Differ,
+                        (_, _) => Inherit::None,
                     };
                     graph.add_edge(*oix, *cix, inherit);
                 });
