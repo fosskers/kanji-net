@@ -55,6 +55,20 @@ pub enum Inheritance {
     Differ,
 }
 
+impl Inheritance {
+    // TODO These can be RGB!
+    pub fn to_dot_attr(&self) -> String {
+        match self {
+            Inheritance::Same => "color=green".to_string(),
+            Inheritance::Secondary => "color=greenyellow".to_string(),
+            Inheritance::Voicing => "color=yellow".to_string(),
+            Inheritance::Consonant => "color=orange".to_string(),
+            Inheritance::Rhymes => "color=orangered".to_string(),
+            Inheritance::Differ => "color=red".to_string(),
+        }
+    }
+}
+
 impl fmt::Display for Inheritance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
