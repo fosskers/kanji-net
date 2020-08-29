@@ -53,6 +53,8 @@ pub enum Inheritance {
     Rhymes,
     /// The child bares no resemblance to the parent. (e.g. こく→よう)
     Differ,
+    /// The child has no 音読み, which occurs often with 国字.
+    None,
 }
 
 impl Inheritance {
@@ -65,6 +67,7 @@ impl Inheritance {
             Inheritance::Consonant => "color=orange".to_string(),
             Inheritance::Rhymes => "color=orangered".to_string(),
             Inheritance::Differ => "color=red".to_string(),
+            Inheritance::None => "".to_string(),
         }
     }
 }
@@ -78,6 +81,7 @@ impl fmt::Display for Inheritance {
             Inheritance::Consonant => write!(f, "Consonant"),
             Inheritance::Rhymes => write!(f, "Rhymes"),
             Inheritance::Differ => write!(f, "Differ"),
+            Inheritance::None => write!(f, "None"),
         }
     }
 }
@@ -108,15 +112,21 @@ impl DB {
         for e in entries.values() {
             // Safe unwrap, since we definitely added every `Kanji` key to the
             // `index` HashMap.
-            let child = index.get(&e.kanji).unwrap();
+            let cix = index.get(&e.kanji).unwrap();
             e.oya
                 .iter()
                 .filter_map(|o| {
-                    let oya = index.get(o)?;
-                    Some((oya, child))
+                    let oya = entries.get(o)?;
+                    let oix = index.get(o)?;
+                    Some((oya, oix, cix))
                 })
-                .for_each(|(o, c)| {
-                    graph.add_edge(*o, *c, Inheritance::Differ); // TODO Make proper inheritance.
+                .for_each(|(oya, oix, cix)| {
+                    let inherit = if e.onyomi == oya.onyomi {
+                        Inheritance::Same
+                    } else {
+                        Inheritance::Differ
+                    };
+                    graph.add_edge(*oix, *cix, inherit);
                 });
         }
 
