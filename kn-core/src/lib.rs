@@ -43,6 +43,8 @@ impl std::error::Error for Error {
 pub enum Inheritance {
     /// The child is the exact same as the parent. (e.g. こく→こく)
     Same,
+    /// A secondary reading of the child is the same as the parent.
+    Secondary,
     /// The child is a voicing variant of the parent. (e.g. こく→ごく)
     Voicing,
     /// The first consonant of the child is at least the same as the parent. (e.g. こく→けい)
@@ -57,6 +59,7 @@ impl fmt::Display for Inheritance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Inheritance::Same => write!(f, "Same"),
+            Inheritance::Secondary => write!(f, "Secondary"),
             Inheritance::Voicing => write!(f, "Voicing"),
             Inheritance::Consonant => write!(f, "Consonant"),
             Inheritance::Rhymes => write!(f, "Rhymes"),
@@ -117,8 +120,8 @@ pub struct Entry {
     pub kanji: Kanji,
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
     pub oya: HashSet<Kanji>,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
-    pub onyomi: HashSet<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub onyomi: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub imi: Vec<(String, String)>,
 }
