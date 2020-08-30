@@ -13,5 +13,5 @@ serde_json = "1.0"
 [dependencies.kanji]
 version = "1.1"
 git = "https://github.com/fosskers/rs-kanji"
-rev = "22544f87bb8e7e8f75fcbe06f84aa70d99e2304a"
+rev = "c6508cedd5b57aecd62d37933e13aef7a22c8cf8"
 features = ["serde"]
