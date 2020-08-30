@@ -1,6 +1,7 @@
 use gumdrop::{Options, ParsingStyle};
-use kn_core::{Entry, Error, Kanji, DB};
+use kn_core::{Entry, Error, KGraph, Kanji, DB};
 use petgraph::dot::{Config, Dot};
+use petgraph::prelude::*;
 use std::collections::HashSet;
 use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
@@ -33,7 +34,14 @@ enum Command {
 struct New {}
 
 #[derive(Options)]
-struct Graph {}
+struct Graph {
+    /// Show this help message.
+    help: bool,
+
+    /// Kanji whose families you wish to focus on.
+    #[options(free, parse(try_from_str = "kanji_from_str"))]
+    kanji: Option<Kanji>,
+}
 
 fn main() -> Result<(), Error> {
     let args = Args::parse_args_or_exit(ParsingStyle::AllOptions);
@@ -45,7 +53,7 @@ fn main() -> Result<(), Error> {
             Ok(())
         }
         Some(Command::New(_)) => new_entry(&args.data),
-        Some(Command::Graph(_)) => graph_dot(&args.data),
+        Some(Command::Graph(g)) => graph_dot(&args.data, g.kanji),
         None => Ok(()),
     }
 }
@@ -125,15 +133,70 @@ fn get_legal_kanji(
     }
 }
 
-// TODO Customize output to show edge colours based on `Inherit`.
-fn graph_dot(path: &Path) -> Result<(), Error> {
+fn graph_dot(path: &Path, mk: Option<Kanji>) -> Result<(), Error> {
     let db = kn_core::open_db(path)?;
-    let dot = Dot::with_attr_getters(
-        &db.graph,
+    let graph = match mk {
+        None => db.graph,
+        Some(k) => filtered_graph(db, k)?,
+    };
+    println!("{}", graph_to_dot(&graph));
+    Ok(())
+}
+
+fn graph_to_dot(graph: &KGraph) -> Dot<&KGraph> {
+    Dot::with_attr_getters(
+        graph,
         &[Config::EdgeNoLabel],
         &|_, e| e.weight().to_dot_attr(),
         &|_, _| "".to_string(),
-    );
-    println!("{}", dot);
-    Ok(())
+    )
+}
+
+/// Hone in on specific Kanji families.
+fn filtered_graph(db: DB, k: Kanji) -> Result<KGraph, Error> {
+    let kix = db.index.get(&k).ok_or(Error::Missing(k))?;
+    let children = all_children(&db.graph, *kix);
+    let parents = all_parents(&db, k);
+    let indices: HashSet<NodeIndex<u16>> = children.union(&parents).map(|ix| *ix).collect();
+    let filtered = db
+        .graph
+        .filter_map(|ix, k| indices.get(&ix).map(|_| *k), |_, e| Some(*e));
+
+    Ok(filtered)
+}
+
+/// Walk down the graph to find all the descendants of the given `Kanji`.
+fn all_children(graph: &KGraph, kix: NodeIndex<u16>) -> HashSet<NodeIndex<u16>> {
+    let mut ixs: HashSet<NodeIndex<u16>> = graph
+        .neighbors_directed(kix, Direction::Outgoing)
+        .flat_map(|nix| all_children(graph, nix))
+        .collect();
+    ixs.insert(kix);
+    ixs
+}
+
+/// Walk up the graph to find all the ancestors of the given `Kanji`.
+fn all_parents(db: &DB, k: Kanji) -> HashSet<NodeIndex<u16>> {
+    db.entries
+        .get(&k)
+        .map(|e| {
+            e.oya
+                .iter()
+                .filter_map(|o| {
+                    let ix = db.index.get(o)?;
+                    let mut parents = all_parents(db, *o);
+                    parents.insert(*ix);
+                    Some(parents)
+                })
+                .flatten()
+                .collect()
+        })
+        .unwrap_or_else(|| HashSet::new())
+}
+
+fn kanji_from_str(s: &str) -> Result<Kanji, Error> {
+    s.chars()
+        .next()
+        .and_then(Kanji::new)
+        .ok_or(Error::NotKanji(s.to_string()))
 }
