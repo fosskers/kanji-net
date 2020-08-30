@@ -5,7 +5,7 @@ mod utils;
 pub use kanji::Kanji;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::path::Path;
@@ -158,8 +158,8 @@ impl DB {
 #[derive(Serialize, Deserialize)]
 pub struct Entry {
     pub kanji: Kanji,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
-    pub oya: HashSet<Kanji>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub oya: Vec<Kanji>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub onyomi: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -188,5 +188,9 @@ pub fn write_db(path: &Path, db: DB) -> Result<(), Error> {
         .map(|(_, v)| v)
         .collect::<Vec<Entry>>();
     entries.sort_by_key(|e| e.kanji);
+    entries.iter_mut().for_each(|e| {
+        e.oya.sort();
+        e.onyomi.sort();
+    });
     serde_json::to_writer_pretty(file, &entries).map_err(Error::JSON)
 }

@@ -74,7 +74,7 @@ fn kanji_prompt(db: &DB) -> Result<Entry, Error> {
     let in_handle = io::stdin();
     let mut out_handle = io::stdout();
 
-    let oya: HashSet<Kanji> = get_line(&in_handle, &mut out_handle, "親")?
+    let oya: Vec<Kanji> = get_line(&in_handle, &mut out_handle, "親")?
         .split_whitespace()
         .filter_map(|s| s.chars().next())
         .filter_map(Kanji::new)
