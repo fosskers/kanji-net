@@ -134,7 +134,11 @@ impl DB {
                     let inherit = match (e.onyomi.get(0), oya.onyomi.get(0)) {
                         (Some(a), Some(b)) if a == b => Inherit::Same,
                         (Some(a), Some(b)) if utils::is_voiced_pair(a, b) => Inherit::Voicing,
-                        (Some(_), Some(b)) if e.onyomi.iter().any(|on| on == b) => Inherit::Second,
+                        (Some(_), Some(_))
+                            if e.onyomi.iter().any(|a| oya.onyomi.iter().any(|b| a == b)) =>
+                        {
+                            Inherit::Second
+                        }
                         (Some(_), Some(_)) => Inherit::Differ,
                         (_, _) => Inherit::None,
                     };
