@@ -19,6 +19,10 @@ pub enum Error {
     JSON(serde_json::Error),
     /// A given `Kanji` already exists in the database.
     Exists(Kanji),
+    /// A given `Kanji` is missing from the database.
+    Missing(Kanji),
+    /// The given `String` does not represent a single `Kanji`.
+    NotKanji(String),
 }
 
 impl std::fmt::Display for Error {
@@ -27,6 +31,8 @@ impl std::fmt::Display for Error {
             Error::IO(e) => e.fmt(f),
             Error::JSON(e) => e.fmt(f),
             Error::Exists(k) => write!(f, "{} already has an entry in the database.", k.get()),
+            Error::Missing(k) => write!(f, "{} is missing from the database.", k.get()),
+            Error::NotKanji(s) => write!(f, "{} is not Kanji.", s),
         }
     }
 }
@@ -37,11 +43,14 @@ impl std::error::Error for Error {
             Error::IO(e) => Some(e),
             Error::JSON(e) => Some(e),
             Error::Exists(_) => None,
+            Error::Missing(_) => None,
+            Error::NotKanji(_) => None,
         }
     }
 }
 
 /// The relationship between parents and children, in terms of their readings.
+#[derive(Clone, Copy)]
 pub enum Inherit {
     /// The child is the exact same as the parent. (e.g. こく→こく)
     Same,
@@ -84,11 +93,14 @@ impl fmt::Display for Inherit {
     }
 }
 
+/// A convenient alias.
+pub type KGraph = Graph<Kanji, Inherit, Directed, u16>;
+
 /// An in-memory database for querying `Kanji` data.
 pub struct DB {
     pub entries: HashMap<Kanji, Entry>,
     pub index: HashMap<Kanji, NodeIndex<u16>>,
-    pub graph: Graph<Kanji, Inherit, Directed, u16>,
+    pub graph: KGraph,
 }
 
 impl DB {
@@ -99,7 +111,7 @@ impl DB {
     /// Will panic if `Graph::add_node` panics, namely if the `HashMap` has over
     /// `u16` entries, which it never will.
     pub fn new(entries: HashMap<Kanji, Entry>) -> DB {
-        let mut graph: Graph<Kanji, Inherit, Directed, u16> = Graph::default();
+        let mut graph: KGraph = Graph::default();
 
         // Add all nodes to the graph.
         let index: HashMap<Kanji, NodeIndex<u16>> =
