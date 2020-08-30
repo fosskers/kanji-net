@@ -188,9 +188,6 @@ pub fn write_db(path: &Path, db: DB) -> Result<(), Error> {
         .map(|(_, v)| v)
         .collect::<Vec<Entry>>();
     entries.sort_by_key(|e| e.kanji);
-    entries.iter_mut().for_each(|e| {
-        e.oya.sort();
-        e.onyomi.sort();
-    });
+    entries.iter_mut().for_each(|e| e.oya.sort());
     serde_json::to_writer_pretty(file, &entries).map_err(Error::JSON)
 }
