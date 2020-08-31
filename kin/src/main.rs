@@ -5,6 +5,7 @@ use petgraph::prelude::*;
 use std::collections::HashSet;
 use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 #[derive(Options)]
 struct Args {
@@ -28,6 +29,8 @@ enum Command {
     New(New),
     /// Output the content of the Kanji Graph in Dot format.
     Graph(Graph),
+    /// Show database statistics.
+    Stats(Stats),
 }
 
 #[derive(Options)]
@@ -43,6 +46,9 @@ struct Graph {
     kanji: Option<Kanji>,
 }
 
+#[derive(Options)]
+struct Stats {}
+
 fn main() -> Result<(), Error> {
     let args = Args::parse_args_or_exit(ParsingStyle::AllOptions);
 
@@ -54,13 +60,14 @@ fn main() -> Result<(), Error> {
         }
         Some(Command::New(_)) => new_entry(&args.data),
         Some(Command::Graph(g)) => graph_dot(&args.data, g.kanji),
+        Some(Command::Stats(_)) => db_stats(&args.data),
         None => Ok(()),
     }
 }
 
 fn new_entry(path: &Path) -> Result<(), Error> {
     let mut db = kn_core::open_db(path)?;
-    let entry = kanji_prompt(&db)?;
+    let entry = kanji_prompt()?;
     let kanji = entry.kanji;
 
     match db.entries.insert(kanji, entry) {
@@ -70,7 +77,7 @@ fn new_entry(path: &Path) -> Result<(), Error> {
 }
 
 /// Prompt the user for the fields of an `Entry` to add to the database.
-fn kanji_prompt(db: &DB) -> Result<Entry, Error> {
+fn kanji_prompt() -> Result<Entry, Error> {
     let in_handle = io::stdin();
     let mut out_handle = io::stdout();
 
@@ -79,17 +86,6 @@ fn kanji_prompt(db: &DB) -> Result<Entry, Error> {
         .filter_map(|s| s.chars().next())
         .filter_map(Kanji::new)
         .collect();
-
-    // let children: String = data
-    //     .values()
-    //     .filter(|v| !v.oya.is_disjoint(&oya))
-    //     .map(|v| v.kanji.get())
-    //     .collect();
-
-    // if !children.is_empty() {
-    //     println!("Children of those parents:");
-    //     println!("  {}", children);
-    // }
 
     let kanji = get_legal_kanji(&in_handle, &mut out_handle, "漢字")?;
     let onyomi = get_line(&in_handle, &mut out_handle, "音読み")?
@@ -199,4 +195,14 @@ fn kanji_from_str(s: &str) -> Result<Kanji, Error> {
         .next()
         .and_then(Kanji::new)
         .ok_or(Error::NotKanji(s.to_string()))
+}
+
+fn db_stats(path: &Path) -> Result<(), Error> {
+    let now = SystemTime::now();
+    let db = kn_core::open_db(path)?;
+    let micros = now.elapsed().map_err(Error::Time)?.as_micros();
+
+    println!("DB loaded in {} microseconds.", micros);
+    println!("DB contains {} entries.", db.entries.len());
+    Ok(())
 }
