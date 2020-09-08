@@ -49,3 +49,30 @@ fn voiced_char(c: char) -> Option<char> {
         _ => None,
     }
 }
+
+pub fn is_rhyme(a: &str, b: &str) -> bool {
+    let mut chars = a.chars().zip(b.chars());
+    chars
+        .next()
+        .map(|(x, y)| vowel(x) == vowel(y))
+        .unwrap_or(false)
+        && chars.all(|(x, y)| x == y)
+}
+
+// TODO Account for small よ, etc.
+/// What is the vowel of the given Hiragana?
+fn vowel(c: char) -> Option<char> {
+    match c {
+        'あ' | 'か' | 'さ' | 'た' | 'な' | 'は' | 'ま' | 'や' | 'ら' | 'わ' => Some('あ'),
+        'が' | 'ざ' | 'だ' | 'ば' | 'ぱ' => Some('あ'),
+        'い' | 'き' | 'し' | 'ち' | 'に' | 'ひ' | 'み' | 'り' => Some('い'),
+        'ぎ' | 'じ' | 'ぢ' | 'び' | 'ぴ' => Some('い'),
+        'う' | 'く' | 'す' | 'つ' | 'ぬ' | 'ふ' | 'む' | 'ゆ' | 'る' => Some('う'),
+        'ぐ' | 'ず' | 'づ' | 'ぶ' | 'ぷ' => Some('う'),
+        'え' | 'け' | 'せ' | 'て' | 'ね' | 'へ' | 'め' | 'れ' => Some('え'),
+        'げ' | 'ぜ' | 'で' | 'べ' | 'ぺ' => Some('え'),
+        'お' | 'こ' | 'そ' | 'と' | 'の' | 'ほ' | 'も' | 'よ' | 'ろ' => Some('お'),
+        'ご' | 'ぞ' | 'ど' | 'ぼ' | 'ぽ' => Some('お'),
+        _ => None,
+    }
+}

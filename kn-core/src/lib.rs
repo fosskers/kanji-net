@@ -63,6 +63,8 @@ pub enum Inherit {
     Second,
     /// The child is a voicing variant of the parent. (e.g. こく→ごく)
     Voicing,
+    /// The child is a rhyme of the parent. (e.g. こく→よく)
+    Rhyme,
     /// The first consonant of the child is at least the same as the parent. (e.g. こく→けい)
     Consonant,
     /// The child bares no resemblance to the parent. (e.g. こく→よう)
@@ -78,6 +80,7 @@ impl Inherit {
             Inherit::Same => "color=green".to_string(),
             Inherit::Second => "color=greenyellow".to_string(),
             Inherit::Voicing => "color=yellow".to_string(),
+            Inherit::Rhyme => "color=yellow".to_string(), // TODO Consider different colour.
             Inherit::Consonant => "color=orange".to_string(),
             Inherit::Differ => "color=red".to_string(),
             Inherit::None => "color=gray".to_string(),
@@ -91,6 +94,7 @@ impl fmt::Display for Inherit {
             Inherit::Same => write!(f, "Same"),
             Inherit::Second => write!(f, "Second"),
             Inherit::Voicing => write!(f, "Voicing"),
+            Inherit::Rhyme => write!(f, "Rhyme"),
             Inherit::Consonant => write!(f, "Consonant"),
             Inherit::Differ => write!(f, "Differ"),
             Inherit::None => write!(f, "None"),
@@ -139,6 +143,7 @@ impl DB {
                     let inherit = match (e.onyomi.get(0), oya.onyomi.get(0)) {
                         (Some(a), Some(b)) if a == b => Inherit::Same,
                         (Some(a), Some(b)) if utils::is_voiced_pair(a, b) => Inherit::Voicing,
+                        (Some(a), Some(b)) if utils::is_rhyme(a, b) => Inherit::Rhyme,
                         (Some(_), Some(_))
                             if e.onyomi.iter().any(|a| oya.onyomi.iter().any(|b| a == b)) =>
                         {
