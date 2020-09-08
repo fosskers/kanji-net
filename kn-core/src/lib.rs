@@ -2,7 +2,7 @@
 
 mod utils;
 
-pub use kanji::Kanji;
+pub use kanji::{Kanji, Level};
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -156,6 +156,15 @@ impl DB {
             index,
             graph,
         }
+    }
+
+    /// Fetch the Exam levels of all `Kanji` in the database.
+    pub fn levels(&self) -> HashMap<Kanji, Level> {
+        let table = kanji::level_table();
+        self.entries
+            .iter()
+            .filter_map(|(k, _)| table.get(k).map(|l| (*k, *l)))
+            .collect()
     }
 }
 
