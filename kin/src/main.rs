@@ -1,5 +1,6 @@
 use gumdrop::{Options, ParsingStyle};
-use kn_core::{Entry, Error, KGraph, Kanji, DB};
+use kanji::exam_lists::*;
+use kn_core::{Entry, Error, KGraph, Kanji, Level, DB};
 use petgraph::dot::{Config, Dot};
 use petgraph::prelude::*;
 use std::collections::HashSet;
@@ -201,8 +202,31 @@ fn db_stats(path: &Path) -> Result<(), Error> {
     let now = SystemTime::now();
     let db = kn_core::open_db(path)?;
     let micros = now.elapsed().map_err(Error::Time)?.as_micros();
+    let levels = db.levels();
+
+    let pairs = vec![
+        (Level::Ten, LEVEL_10.chars().count()),
+        (Level::Nine, LEVEL_09.chars().count()),
+        (Level::Eight, LEVEL_08.chars().count()),
+        (Level::Seven, LEVEL_07.chars().count()),
+        (Level::Six, LEVEL_06.chars().count()),
+        (Level::Five, LEVEL_05.chars().count()),
+        (Level::Four, LEVEL_04.chars().count()),
+        (Level::Three, LEVEL_03.chars().count()),
+        (Level::PreTwo, LEVEL_02_PRE.chars().count()),
+        (Level::Two, LEVEL_02.chars().count()),
+        (Level::PreOne, LEVEL_01_PRE.chars().count()),
+        (Level::One, LEVEL_01.chars().count()),
+    ];
 
     println!("DB loaded in {} microseconds.", micros);
     println!("DB contains {} entries.", db.entries.len());
+    println!("Kanji Levels completed:");
+
+    pairs.iter().for_each(|(level, len)| {
+        let found = levels.iter().filter(|(_, l)| *l == level).count();
+        println!("  - {:?}: {}/{}", level, found, len);
+    });
+
     Ok(())
 }
