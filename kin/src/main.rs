@@ -152,7 +152,7 @@ fn graph_to_dot(graph: &KGraph) -> Dot<&KGraph> {
 /// Hone in on specific Kanji families.
 fn filtered_graph(db: DB, k: Kanji) -> Result<KGraph, Error> {
     let kix = db.index.get(&k).ok_or(Error::Missing(k))?;
-    let children = all_children(&db.graph, *kix);
+    let children = all_children(&db, *kix);
     let parents = all_parents(&db, k);
     let indices: HashSet<NodeIndex<u16>> = children.union(&parents).map(|ix| *ix).collect();
     let filtered = db
@@ -163,10 +163,30 @@ fn filtered_graph(db: DB, k: Kanji) -> Result<KGraph, Error> {
 }
 
 /// Walk down the graph to find all the descendants of the given `Kanji`.
-fn all_children(graph: &KGraph, kix: NodeIndex<u16>) -> HashSet<NodeIndex<u16>> {
-    let mut ixs: HashSet<NodeIndex<u16>> = graph
+fn all_children(db: &DB, kix: NodeIndex<u16>) -> HashSet<NodeIndex<u16>> {
+    let mut ixs: HashSet<NodeIndex<u16>> = db
+        .graph
         .neighbors_directed(kix, Direction::Outgoing)
-        .flat_map(|nix| all_children(graph, nix))
+        .flat_map(|kix| {
+            let grandchildren = all_children(db, kix);
+            let other_parents = db
+                .graph
+                .node_weight(kix)
+                .and_then(|k| db.entries.get(k))
+                .map(|e| {
+                    e.oya
+                        .iter()
+                        .filter_map(|o| db.index.get(o))
+                        .map(|ix| *ix)
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            grandchildren
+                .union(&other_parents)
+                .map(|x| *x)
+                .collect::<HashSet<_>>()
+        })
         .collect();
     ixs.insert(kix);
     ixs
