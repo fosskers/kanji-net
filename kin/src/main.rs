@@ -32,6 +32,8 @@ enum Command {
     Graph(Graph),
     /// Show database statistics.
     Stats(Stats),
+    /// Show the levels of given Kanji.
+    Levels(Levels),
 }
 
 #[derive(Options)]
@@ -47,8 +49,20 @@ struct Graph {
     kanji: Option<Kanji>,
 }
 
+/// Various statistics about the Kanji database.
 #[derive(Options)]
 struct Stats {}
+
+/// Inspect the levels of given Kanji.
+#[derive(Options)]
+struct Levels {
+    /// Show this help message.
+    help: bool,
+
+    /// Kanji whose level you wish to inspect.
+    #[options(free, parse(try_from_str = "kanji_from_str"))]
+    kanji: Vec<Kanji>,
+}
 
 fn main() -> Result<(), Error> {
     let args = Args::parse_args_or_exit(ParsingStyle::AllOptions);
@@ -62,6 +76,7 @@ fn main() -> Result<(), Error> {
         Some(Command::New(_)) => new_entry(&args.data),
         Some(Command::Graph(g)) => graph_dot(&args.data, g.kanji),
         Some(Command::Stats(_)) => db_stats(&args.data),
+        Some(Command::Levels(l)) => Ok(levels(l.kanji)),
         None => Ok(()),
     }
 }
@@ -249,4 +264,15 @@ fn db_stats(path: &Path) -> Result<(), Error> {
     });
 
     Ok(())
+}
+
+fn levels(ks: Vec<Kanji>) {
+    let table = kanji::level_table();
+
+    ks.iter().for_each(|k| {
+        table
+            .get(&k)
+            .into_iter()
+            .for_each(|l| println!("{}: {:?}", k, l))
+    })
 }
