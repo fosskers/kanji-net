@@ -2,10 +2,12 @@
 
 mod utils;
 
+use itertools::Itertools;
 pub use kanji::{Kanji, Level};
+use petgraph::algo;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::path::Path;
@@ -140,7 +142,7 @@ impl DB {
                     Some((oya, oix, cix))
                 })
                 .for_each(|(oya, oix, cix)| {
-                    let inherit = match (e.onyomi.get(0), oya.onyomi.get(0)) {
+                    let inherit = match (e.onyomi.first(), oya.onyomi.first()) {
                         (Some(a), Some(b)) if a == b => Inherit::Same,
                         (Some(a), Some(b)) if utils::is_voiced_pair(a, b) => Inherit::Voicing,
                         (Some(a), Some(b)) if utils::is_rhyme(a, b) => Inherit::Rhyme,
@@ -163,6 +165,13 @@ impl DB {
         }
     }
 
+    /// The full `Entry` associated with some index.
+    pub fn entry(&self, nix: NodeIndex<u16>) -> Option<&Entry> {
+        self.graph
+            .node_weight(nix)
+            .and_then(|k| self.entries.get(k))
+    }
+
     /// Fetch the Exam levels of all `Kanji` in the database.
     pub fn levels(&self) -> HashMap<Kanji, Level> {
         let table = kanji::level_table();
@@ -177,11 +186,66 @@ impl DB {
         let mut s = String::new();
         s.push_str("digraph {\n");
 
-        self.index.iter().for_each(|(k, ix)| {
-            let line = format!("    {} [label=\"{}\"]\n", ix.index(), k);
-            s.push_str(&line);
-        });
+        // self.index.iter().for_each(|(k, ix)| {
+        //     let line = format!("    {} [ label=\"{}\" ]\n", ix.index(), k);
+        //     s.push_str(&line);
+        // });
 
+        let mut seen: HashSet<NodeIndex<u16>> = HashSet::new();
+        // The graph is cyclic, so TopSort shouldn't throw.
+        algo::toposort(&self.graph, None)
+            .unwrap()
+            .iter()
+            .for_each(|pix| {
+                if !seen.contains(pix) {
+                    seen.insert(*pix);
+                    let k = self.entry(*pix).unwrap().kanji;
+                    let line = format!("    {} [ label=\"{}\" ]\n", pix.index(), k);
+                    s.push_str(&line);
+                }
+
+                self.graph
+                    .neighbors_directed(*pix, Direction::Outgoing)
+                    .filter_map(|kix| self.entry(kix).map(|e| (kix, e)))
+                    .map(|(kix, e)| (kix, e.kanji, e.onyomi.first()))
+                    .sorted_by(|a, b| a.2.cmp(&b.2))
+                    .group_by(|pair| pair.2)
+                    .into_iter()
+                    .for_each(|(yomi, group)| {
+                        let g: Vec<_> = group.filter(|(kix, _, _)| !seen.contains(kix)).collect();
+
+                        match yomi {
+                            None => g.into_iter().for_each(|(kix, k, _)| {
+                                seen.insert(kix);
+                                let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
+                                s.push_str(&line);
+                            }),
+                            Some(_) if g.len() == 1 => g.into_iter().for_each(|(kix, k, _)| {
+                                seen.insert(kix);
+                                let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
+                                s.push_str(&line);
+                            }),
+                            Some(y) if !g.is_empty() => {
+                                s.push_str("\n");
+                                s.push_str(&format!("    subgraph cluster_{}{} {{\n", y, g.len()));
+                                s.push_str(&format!("        label=\"{}\";\n", y));
+                                s.push_str("        style=dashed;\n");
+                                s.push_str("        color=brown;\n");
+                                s.push_str("\n");
+                                g.into_iter().for_each(|(kix, k, _)| {
+                                    seen.insert(kix);
+                                    let line =
+                                        format!("        {} [ label=\"{}\" ];\n", kix.index(), k);
+                                    s.push_str(&line);
+                                });
+                                s.push_str("    }\n\n");
+                            }
+                            _ => (),
+                        }
+                    });
+            });
+
+        // Gap between nodes and edges.
         s.push_str("\n");
 
         self.graph.raw_edges().iter().for_each(|e| {
