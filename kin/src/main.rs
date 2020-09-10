@@ -147,83 +147,12 @@ fn get_legal_kanji(
 
 fn graph_dot(path: &Path, mk: Option<Kanji>) -> Result<(), Error> {
     let db = kn_core::open_db(path)?;
-    let graph = match mk {
-        None => db.graph,
-        Some(k) => filtered_graph(db, k)?,
+    let dot = match mk {
+        None => db.dot(),
+        Some(k) => db.dot_custom(&db.filtered_graph(k)?),
     };
-    println!("{}", graph_to_dot(&graph));
+    println!("{}", dot);
     Ok(())
-}
-
-fn graph_to_dot(graph: &KGraph) -> Dot<&KGraph> {
-    Dot::with_attr_getters(
-        graph,
-        &[Config::EdgeNoLabel],
-        &|_, e| e.weight().to_dot_attr(),
-        &|_, _| "".to_string(),
-    )
-}
-
-/// Hone in on specific Kanji families.
-fn filtered_graph(db: DB, k: Kanji) -> Result<KGraph, Error> {
-    let kix = db.index.get(&k).ok_or(Error::Missing(k))?;
-    let children = all_children(&db, *kix);
-    let parents = all_parents(&db, k);
-    let indices: HashSet<NodeIndex<u16>> = children.union(&parents).map(|ix| *ix).collect();
-    let filtered = db
-        .graph
-        .filter_map(|ix, k| indices.get(&ix).map(|_| *k), |_, e| Some(*e));
-
-    Ok(filtered)
-}
-
-/// Walk down the graph to find all the descendants of the given `Kanji`.
-fn all_children(db: &DB, kix: NodeIndex<u16>) -> HashSet<NodeIndex<u16>> {
-    let mut ixs: HashSet<NodeIndex<u16>> = db
-        .graph
-        .neighbors_directed(kix, Direction::Outgoing)
-        .flat_map(|kix| {
-            let grandchildren = all_children(db, kix);
-            let other_parents = db
-                .graph
-                .node_weight(kix)
-                .and_then(|k| db.entries.get(k))
-                .map(|e| {
-                    e.oya
-                        .iter()
-                        .filter_map(|o| db.index.get(o))
-                        .map(|ix| *ix)
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            grandchildren
-                .union(&other_parents)
-                .map(|x| *x)
-                .collect::<HashSet<_>>()
-        })
-        .collect();
-    ixs.insert(kix);
-    ixs
-}
-
-/// Walk up the graph to find all the ancestors of the given `Kanji`.
-fn all_parents(db: &DB, k: Kanji) -> HashSet<NodeIndex<u16>> {
-    db.entries
-        .get(&k)
-        .map(|e| {
-            e.oya
-                .iter()
-                .filter_map(|o| {
-                    let ix = db.index.get(o)?;
-                    let mut parents = all_parents(db, *o);
-                    parents.insert(*ix);
-                    Some(parents)
-                })
-                .flatten()
-                .collect()
-        })
-        .unwrap_or_else(|| HashSet::new())
 }
 
 fn kanji_from_str(s: &str) -> Result<Kanji, Error> {
