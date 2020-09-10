@@ -183,17 +183,17 @@ impl DB {
 
     /// Custom DOT output for a `KGraph`.
     pub fn dot(&self) -> String {
+        self.dot_custom(&self.graph)
+    }
+
+    /// Same as `dot`, but supply your own graph to consider.
+    pub fn dot_custom(&self, graph: &KGraph) -> String {
         let mut s = String::new();
         s.push_str("digraph {\n");
 
-        // self.index.iter().for_each(|(k, ix)| {
-        //     let line = format!("    {} [ label=\"{}\" ]\n", ix.index(), k);
-        //     s.push_str(&line);
-        // });
-
         let mut seen: HashSet<NodeIndex<u16>> = HashSet::new();
         // The graph is cyclic, so TopSort shouldn't throw.
-        algo::toposort(&self.graph, None)
+        algo::toposort(&graph, None)
             .unwrap()
             .iter()
             .for_each(|pix| {
@@ -204,7 +204,7 @@ impl DB {
                     s.push_str(&line);
                 }
 
-                self.graph
+                graph
                     .neighbors_directed(*pix, Direction::Outgoing)
                     .filter_map(|kix| self.entry(kix).map(|e| (kix, e)))
                     .map(|(kix, e)| (kix, e.kanji, e.onyomi.first()))
@@ -248,7 +248,7 @@ impl DB {
         // Gap between nodes and edges.
         s.push_str("\n");
 
-        self.graph.raw_edges().iter().for_each(|e| {
+        graph.raw_edges().iter().for_each(|e| {
             let line = format!(
                 "    {} -> {} [ {} ]\n",
                 e.source().index(),
@@ -260,6 +260,66 @@ impl DB {
 
         s.push_str("}\n");
         s
+    }
+
+    /// Hone in on specific Kanji families.
+    pub fn filtered_graph(&self, k: Kanji) -> Result<KGraph, Error> {
+        let kix = self.index.get(&k).ok_or(Error::Missing(k))?;
+        let children = self.all_children(*kix);
+        let parents = self.all_parents(k);
+        let indices: HashSet<NodeIndex<u16>> = children.union(&parents).map(|ix| *ix).collect();
+        let filtered = self
+            .graph
+            .filter_map(|ix, k| indices.get(&ix).map(|_| *k), |_, e| Some(*e));
+
+        Ok(filtered)
+    }
+
+    /// Walk down the graph to find all the descendants of the given `Kanji`.
+    fn all_children(&self, kix: NodeIndex<u16>) -> HashSet<NodeIndex<u16>> {
+        let mut ixs: HashSet<NodeIndex<u16>> = self
+            .graph
+            .neighbors_directed(kix, Direction::Outgoing)
+            .flat_map(|kix| {
+                let grandchildren = self.all_children(kix);
+                let other_parents = self
+                    .entry(kix)
+                    .map(|e| {
+                        e.oya
+                            .iter()
+                            .filter_map(|o| self.index.get(o))
+                            .map(|ix| *ix)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                grandchildren
+                    .union(&other_parents)
+                    .map(|x| *x)
+                    .collect::<HashSet<_>>()
+            })
+            .collect();
+        ixs.insert(kix);
+        ixs
+    }
+
+    /// Walk up the graph to find all the ancestors of the given `Kanji`.
+    fn all_parents(&self, k: Kanji) -> HashSet<NodeIndex<u16>> {
+        self.entries
+            .get(&k)
+            .map(|e| {
+                e.oya
+                    .iter()
+                    .filter_map(|o| {
+                        let ix = self.index.get(o)?;
+                        let mut parents = self.all_parents(*o);
+                        parents.insert(*ix);
+                        Some(parents)
+                    })
+                    .flatten()
+                    .collect()
+            })
+            .unwrap_or_else(|| HashSet::new())
     }
 }
 
