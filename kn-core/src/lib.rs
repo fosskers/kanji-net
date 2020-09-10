@@ -199,14 +199,23 @@ impl DB {
             .for_each(|pix| {
                 if !seen.contains(pix) {
                     seen.insert(*pix);
-                    let k = self.entry(*pix).unwrap().kanji;
+                    let k = graph
+                        .node_weight(*pix)
+                        .and_then(|k| self.entries.get(k))
+                        .unwrap()
+                        .kanji;
                     let line = format!("    {} [ label=\"{}\" ]\n", pix.index(), k);
                     s.push_str(&line);
                 }
 
                 graph
                     .neighbors_directed(*pix, Direction::Outgoing)
-                    .filter_map(|kix| self.entry(kix).map(|e| (kix, e)))
+                    .filter_map(|kix| {
+                        graph
+                            .node_weight(kix)
+                            .and_then(|k| self.entries.get(k))
+                            .map(|e| (kix, e))
+                    })
                     .map(|(kix, e)| (kix, e.kanji, e.onyomi.first()))
                     .sorted_by(|a, b| a.2.cmp(&b.2))
                     .group_by(|pair| pair.2)
