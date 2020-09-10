@@ -171,6 +171,32 @@ impl DB {
             .filter_map(|(k, _)| table.get(k).map(|l| (*k, *l)))
             .collect()
     }
+
+    /// Custom DOT output for a `KGraph`.
+    pub fn dot(&self) -> String {
+        let mut s = String::new();
+        s.push_str("digraph {\n");
+
+        self.index.iter().for_each(|(k, ix)| {
+            let line = format!("    {} [label=\"{}\"]\n", ix.index(), k);
+            s.push_str(&line);
+        });
+
+        s.push_str("\n");
+
+        self.graph.raw_edges().iter().for_each(|e| {
+            let line = format!(
+                "    {} -> {} [ {} ]\n",
+                e.source().index(),
+                e.target().index(),
+                e.weight.to_dot_attr(),
+            );
+            s.push_str(&line);
+        });
+
+        s.push_str("}\n");
+        s
+    }
 }
 
 /// An entry in the kanji database.
