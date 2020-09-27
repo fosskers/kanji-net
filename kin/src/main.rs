@@ -1,6 +1,7 @@
 use gumdrop::{Options, ParsingStyle};
 use kanji::exam_lists::*;
 use kn_core::{Entry, Error, Kanji, Level};
+use std::collections::HashMap;
 use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -184,10 +185,26 @@ fn db_stats(path: &Path) -> Result<(), Error> {
     println!("DB contains {} entries.", db.entries.len());
     println!("Kanji Levels completed:");
 
+    let jouyou: usize = pairs.iter().take(10).map(|(_, c)| c).sum();
+    let level_totals: HashMap<Level, usize> = pairs
+        .iter()
+        .map(|(level, _)| {
+            let found = levels.iter().filter(|(_, l)| *l == level).count();
+            (*level, found)
+        })
+        .collect();
+
     pairs.iter().for_each(|(level, len)| {
-        let found = levels.iter().filter(|(_, l)| *l == level).count();
+        let found = level_totals.get(level).unwrap();
         println!("  - {:?}: {}/{}", level, found, len);
     });
+
+    let total_entered: usize = level_totals.values().sum();
+    let percent = 100.0 * (total_entered as f64) / (jouyou as f64);
+    println!(
+        "常用 Completion: {}/{} ({:.2}%)",
+        total_entered, jouyou, percent
+    );
 
     Ok(())
 }
