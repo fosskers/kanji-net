@@ -1,9 +1,6 @@
 use gumdrop::{Options, ParsingStyle};
 use kanji::exam_lists::*;
-use kn_core::{Entry, Error, KGraph, Kanji, Level, DB};
-use petgraph::dot::{Config, Dot};
-use petgraph::prelude::*;
-use std::collections::HashSet;
+use kn_core::{Entry, Error, Kanji, Level};
 use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
