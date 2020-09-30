@@ -272,16 +272,17 @@ impl DB {
     }
 
     /// Hone in on specific Kanji families.
-    pub fn filtered_graph(&self, k: Kanji) -> Result<KGraph, Error> {
-        let kix = self.index.get(&k).ok_or(Error::Missing(k))?;
-        let children = self.all_children(*kix);
-        let parents = self.all_parents(k);
+    pub fn filtered_graph(&self, ks: Vec<Kanji>) -> KGraph {
+        let children: HashSet<_> = ks
+            .iter()
+            .filter_map(|k| self.index.get(&k))
+            .flat_map(|kix| self.all_children(*kix))
+            .collect();
+        let parents: HashSet<_> = ks.into_iter().flat_map(|k| self.all_parents(k)).collect();
         let indices: HashSet<NodeIndex<u16>> = children.union(&parents).map(|ix| *ix).collect();
-        let filtered = self
-            .graph
-            .filter_map(|ix, k| indices.get(&ix).map(|_| *k), |_, e| Some(*e));
 
-        Ok(filtered)
+        self.graph
+            .filter_map(|ix, k| indices.get(&ix).map(|_| *k), |_, e| Some(*e))
     }
 
     /// Walk down the graph to find all the descendants of the given `Kanji`.
