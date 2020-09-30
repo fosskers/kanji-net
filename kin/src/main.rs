@@ -32,6 +32,8 @@ enum Command {
     Stats(Stats),
     /// Show the levels of given Kanji.
     Levels(Levels),
+    /// Give the next Kanji yet unentered into the DB.
+    Next(Next),
 }
 
 #[derive(Options)]
@@ -62,6 +64,9 @@ struct Levels {
     kanji: Vec<Kanji>,
 }
 
+#[derive(Options)]
+struct Next {}
+
 fn main() -> Result<(), Error> {
     let args = Args::parse_args_or_exit(ParsingStyle::AllOptions);
 
@@ -75,6 +80,7 @@ fn main() -> Result<(), Error> {
         Some(Command::Graph(g)) => graph_dot(&args.data, g.kanji),
         Some(Command::Stats(_)) => db_stats(&args.data),
         Some(Command::Levels(l)) => Ok(levels(l.kanji)),
+        Some(Command::Next(_)) => next(&args.data),
         None => Ok(()),
     }
 }
@@ -223,4 +229,33 @@ fn levels(ks: Vec<Kanji>) {
             .into_iter()
             .for_each(|l| println!("{}: {:?}", k, l))
     })
+}
+
+fn next(path: &Path) -> Result<(), Error> {
+    let db = kn_core::open_db(path)?;
+
+    LEVEL_10
+        .chars()
+        .chain(LEVEL_09.chars())
+        .chain(LEVEL_08.chars())
+        .chain(LEVEL_07.chars())
+        .chain(LEVEL_06.chars())
+        .chain(LEVEL_05.chars())
+        .chain(LEVEL_04.chars())
+        .chain(LEVEL_03.chars())
+        .chain(LEVEL_02_PRE.chars())
+        .chain(LEVEL_02.chars())
+        .chain(LEVEL_01_PRE.chars())
+        .chain(LEVEL_01.chars())
+        .filter_map(kanji::Kanji::new)
+        // TODO There must be an idiom for this.
+        .filter_map(|k| match db.entries.get(&k) {
+            None => Some(k),
+            Some(_) => None,
+        })
+        .next()
+        .iter()
+        .for_each(|k| println!("{}", k));
+
+    Ok(())
 }
