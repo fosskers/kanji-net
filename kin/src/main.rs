@@ -210,11 +210,15 @@ fn db_stats(path: &Path) -> Result<(), Error> {
         println!("  - {:?}: {}/{}", level, found, len);
     });
 
-    let total_entered: usize = level_totals.values().sum();
-    let percent = 100.0 * (total_entered as f64) / (jouyou as f64);
+    let entered_jouyou: usize = level_totals
+        .iter()
+        .filter(|(&l, _)| l < Level::PreOne)
+        .map(|(_, s)| s)
+        .sum();
+    let percent = 100.0 * (entered_jouyou as f64) / (jouyou as f64);
     println!(
         "常用 Completion: {}/{} ({:.2}%)",
-        total_entered, jouyou, percent
+        entered_jouyou, jouyou, percent
     );
 
     Ok(())
