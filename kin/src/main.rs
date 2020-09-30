@@ -44,7 +44,7 @@ struct Graph {
 
     /// Kanji whose families you wish to focus on.
     #[options(free, parse(try_from_str = "kanji_from_str"))]
-    kanji: Option<Kanji>,
+    kanji: Vec<Kanji>,
 }
 
 /// Various statistics about the Kanji database.
@@ -84,6 +84,8 @@ fn new_entry(path: &Path) -> Result<(), Error> {
     let entry = kanji_prompt()?;
     let kanji = entry.kanji;
 
+    // On collision, the entry is put into the in-memory copy of the DB, but
+    // never makes it to the on-disk version.
     match db.entries.insert(kanji, entry) {
         Some(_) => Err(Error::Exists(kanji)),
         None => kn_core::write_db(path, db),
@@ -143,12 +145,15 @@ fn get_legal_kanji(
     }
 }
 
-fn graph_dot(path: &Path, mk: Option<Kanji>) -> Result<(), Error> {
+fn graph_dot(path: &Path, ks: Vec<Kanji>) -> Result<(), Error> {
     let db = kn_core::open_db(path)?;
-    let dot = match mk {
-        None => db.dot(),
-        Some(k) => db.dot_custom(&db.filtered_graph(k)?),
+
+    let dot = if ks.is_empty() {
+        db.dot()
+    } else {
+        db.dot_custom(&db.filtered_graph(ks))
     };
+
     println!("{}", dot);
     Ok(())
 }
