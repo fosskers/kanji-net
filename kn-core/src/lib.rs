@@ -285,20 +285,24 @@ impl DB {
             .neighbors_directed(kix, Direction::Outgoing)
             .flat_map(|kix| {
                 let grandchildren = self.all_children(kix);
-                let other_parents = self
+                let other_parents: HashSet<_> = self
                     .entry(kix)
                     .map(|e| {
                         e.oya
                             .iter()
-                            .filter_map(|o| self.index.get(o))
-                            .map(|ix| *ix)
+                            .filter_map(|o| self.index.get(o).map(|ix| (o, ix)))
+                            .flat_map(|(o, ix)| {
+                                let mut others = self.all_parents(*o);
+                                others.insert(*ix);
+                                others
+                            })
                             .collect()
                     })
                     .unwrap_or_default();
 
                 grandchildren
                     .union(&other_parents)
-                    .map(|x| *x)
+                    .copied()
                     .collect::<HashSet<_>>()
             })
             .collect();
