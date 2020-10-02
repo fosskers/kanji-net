@@ -206,7 +206,7 @@ impl DB {
         match dot_mode {
             DotMode::Groups => DB::with_groups(&mut s, filtered),
             DotMode::NoGroups => filtered.for_each(|(kix, k, _)| {
-                let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
+                let line = format!("    {} [ label=\"{}\", shape=circle ]\n", kix.index(), k);
                 s.push_str(&line);
             }),
         }
@@ -251,13 +251,18 @@ impl DB {
                         s.push_str("        color=brown;\n");
                         s.push_str("\n");
                         g.into_iter().for_each(|(kix, k, _)| {
-                            let line = format!("        {} [ label=\"{}\" ];\n", kix.index(), k);
+                            let line = format!(
+                                "        {} [ label=\"{}\", shape=circle ];\n",
+                                kix.index(),
+                                k
+                            );
                             s.push_str(&line);
                         });
                         s.push_str("    }\n\n");
                     }
                     _ => g.into_iter().for_each(|(kix, k, _)| {
-                        let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
+                        let line =
+                            format!("    {} [ label=\"{}\", shape=circle ]\n", kix.index(), k);
                         s.push_str(&line);
                     }),
                 }
