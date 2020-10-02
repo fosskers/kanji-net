@@ -188,11 +188,11 @@ impl DB {
 
     /// Custom DOT output for a `KGraph`.
     pub fn dot(&self) -> String {
-        self.dot_custom(DotMode::NoGroups, &self.graph)
+        self.dot_custom(DotMode::NoGroups, HashSet::new(), &self.graph)
     }
 
     /// Same as `dot`, but supply your own graph to consider.
-    pub fn dot_custom(&self, dot_mode: DotMode, graph: &KGraph) -> String {
+    pub fn dot_custom(&self, dot_mode: DotMode, chosen: HashSet<Kanji>, graph: &KGraph) -> String {
         let mut s = String::new();
         s.push_str("digraph {\n");
 
@@ -204,9 +204,10 @@ impl DB {
         });
 
         match dot_mode {
-            DotMode::Groups => DB::with_groups(&mut s, filtered),
+            DotMode::Groups => DB::with_groups(&chosen, &mut s, filtered),
             DotMode::NoGroups => filtered.for_each(|(kix, k, _)| {
-                let line = format!("    {} [ label=\"{}\", shape=circle ]\n", kix.index(), k);
+                let shape = DB::shape(&chosen, &k);
+                let line = format!("    {} [ label=\"{}\", shape={} ]\n", kix.index(), k, shape);
                 s.push_str(&line);
             }),
         }
@@ -229,7 +230,15 @@ impl DB {
         s
     }
 
-    fn with_groups<'a, F>(s: &mut String, filtered: F)
+    fn shape(chosen: &HashSet<Kanji>, k: &Kanji) -> &'static str {
+        if chosen.contains(k) {
+            "doublecircle"
+        } else {
+            "circle"
+        }
+    }
+
+    fn with_groups<'a, F>(chosen: &HashSet<Kanji>, s: &mut String, filtered: F)
     where
         F: Iterator<Item = (NodeIndex<u16>, Kanji, Option<&'a String>)>,
     {
@@ -251,18 +260,21 @@ impl DB {
                         s.push_str("        color=brown;\n");
                         s.push_str("\n");
                         g.into_iter().for_each(|(kix, k, _)| {
+                            let shape = DB::shape(chosen, &k);
                             let line = format!(
-                                "        {} [ label=\"{}\", shape=circle ];\n",
+                                "        {} [ label=\"{}\", shape={} ];\n",
                                 kix.index(),
-                                k
+                                k,
+                                shape
                             );
                             s.push_str(&line);
                         });
                         s.push_str("    }\n\n");
                     }
                     _ => g.into_iter().for_each(|(kix, k, _)| {
+                        let shape = DB::shape(chosen, &k);
                         let line =
-                            format!("    {} [ label=\"{}\", shape=circle ]\n", kix.index(), k);
+                            format!("    {} [ label=\"{}\", shape={} ]\n", kix.index(), k, shape);
                         s.push_str(&line);
                     }),
                 }
@@ -277,7 +289,7 @@ impl DB {
             .flat_map(|kix| self.all_children(*kix))
             .collect();
         let parents: HashSet<_> = ks.into_iter().flat_map(|k| self.all_parents(k)).collect();
-        let indices: HashSet<NodeIndex<u16>> = children.union(&parents).map(|ix| *ix).collect();
+        let indices: HashSet<NodeIndex<u16>> = children.union(&parents).copied().collect();
 
         self.graph
             .filter_map(|ix, k| indices.get(&ix).map(|_| *k), |_, e| Some(*e))

@@ -157,7 +157,8 @@ fn graph_dot(path: &Path, ks: Vec<Kanji>) -> Result<(), Error> {
     let dot = if ks.is_empty() {
         db.dot()
     } else {
-        db.dot_custom(DotMode::Groups, &db.filtered_graph(ks))
+        let chosen = ks.iter().copied().collect();
+        db.dot_custom(DotMode::Groups, chosen, &db.filtered_graph(ks))
     };
 
     println!("{}", dot);
