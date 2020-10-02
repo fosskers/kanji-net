@@ -4,7 +4,6 @@ mod utils;
 
 use itertools::Itertools;
 pub use kanji::{Kanji, Level};
-use petgraph::algo;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -107,6 +106,12 @@ impl fmt::Display for Inherit {
 /// A convenient alias.
 pub type KGraph = Graph<Kanji, Inherit, Directed, u16>;
 
+/// Specific settings for producing the Dot graph.
+pub enum DotMode {
+    NoGroups,
+    Groups,
+}
+
 /// An in-memory database for querying `Kanji` data.
 pub struct DB {
     pub entries: HashMap<Kanji, Entry>,
@@ -183,80 +188,33 @@ impl DB {
 
     /// Custom DOT output for a `KGraph`.
     pub fn dot(&self) -> String {
-        self.dot_custom(&self.graph)
+        self.dot_custom(DotMode::NoGroups, &self.graph)
     }
 
     /// Same as `dot`, but supply your own graph to consider.
-    pub fn dot_custom(&self, graph: &KGraph) -> String {
+    pub fn dot_custom(&self, dot_mode: DotMode, graph: &KGraph) -> String {
         let mut s = String::new();
         s.push_str("digraph {\n");
 
-        let mut seen: HashSet<NodeIndex<u16>> = HashSet::new();
-        // The graph is cyclic, so TopSort shouldn't throw.
-        algo::toposort(&graph, None)
-            .unwrap()
-            .iter()
-            .for_each(|pix| {
-                if !seen.contains(pix) {
-                    seen.insert(*pix);
-                    let k = graph
-                        .node_weight(*pix)
-                        .and_then(|k| self.entries.get(k))
-                        .unwrap()
-                        .kanji;
-                    let line = format!("    {} [ label=\"{}\" ]\n", pix.index(), k);
-                    s.push_str(&line);
-                }
+        let filtered = graph.node_indices().filter_map(|kix| {
+            graph
+                .node_weight(kix)
+                .and_then(|k| self.entries.get(k))
+                .map(|e| (kix, e.kanji, e.onyomi.first()))
+        });
 
-                graph
-                    .neighbors_directed(*pix, Direction::Outgoing)
-                    .filter_map(|kix| {
-                        graph
-                            .node_weight(kix)
-                            .and_then(|k| self.entries.get(k))
-                            .map(|e| (kix, e))
-                    })
-                    .map(|(kix, e)| (kix, e.kanji, e.onyomi.first()))
-                    .sorted_by(|a, b| a.2.cmp(&b.2))
-                    .group_by(|pair| pair.2)
-                    .into_iter()
-                    .for_each(|(yomi, group)| {
-                        let g: Vec<_> = group.filter(|(kix, _, _)| !seen.contains(kix)).collect();
-
-                        match yomi {
-                            None => g.into_iter().for_each(|(kix, k, _)| {
-                                seen.insert(kix);
-                                let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
-                                s.push_str(&line);
-                            }),
-                            Some(_) if g.len() == 1 => g.into_iter().for_each(|(kix, k, _)| {
-                                seen.insert(kix);
-                                let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
-                                s.push_str(&line);
-                            }),
-                            Some(y) if !g.is_empty() => {
-                                s.push_str("\n");
-                                s.push_str(&format!("    subgraph cluster_{}{} {{\n", y, g.len()));
-                                s.push_str(&format!("        label=\"{}\";\n", y));
-                                s.push_str("        style=dashed;\n");
-                                s.push_str("        color=brown;\n");
-                                s.push_str("\n");
-                                g.into_iter().for_each(|(kix, k, _)| {
-                                    seen.insert(kix);
-                                    let line =
-                                        format!("        {} [ label=\"{}\" ];\n", kix.index(), k);
-                                    s.push_str(&line);
-                                });
-                                s.push_str("    }\n\n");
-                            }
-                            _ => (),
-                        }
-                    });
-            });
+        match dot_mode {
+            DotMode::Groups => DB::with_groups(&mut s, filtered),
+            DotMode::NoGroups => filtered.for_each(|(kix, k, _)| {
+                let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
+                s.push_str(&line);
+            }),
+        }
 
         // Gap between nodes and edges.
         s.push_str("\n");
 
+        // Write all the edges.
         graph.raw_edges().iter().for_each(|e| {
             let line = format!(
                 "    {} -> {} [ {} ]\n",
@@ -269,6 +227,41 @@ impl DB {
 
         s.push_str("}\n");
         s
+    }
+
+    fn with_groups<'a, F>(s: &mut String, filtered: F)
+    where
+        F: Iterator<Item = (NodeIndex<u16>, Kanji, Option<&'a String>)>,
+    {
+        filtered
+            .sorted_by(|a, b| a.2.cmp(&b.2))
+            .group_by(|pair| pair.2)
+            .into_iter()
+            .for_each(|(yomi, group)| {
+                // An unfortunate `collect` to know the number of elements with certainty.
+                let g: Vec<_> = group.collect();
+
+                match yomi {
+                    // Only bother grouping if there is more than one node in the group.
+                    Some(y) if g.len() > 1 => {
+                        s.push_str("\n");
+                        s.push_str(&format!("    subgraph cluster_{} {{\n", y));
+                        s.push_str(&format!("        label=\"{}\";\n", y));
+                        s.push_str("        style=dashed;\n");
+                        s.push_str("        color=brown;\n");
+                        s.push_str("\n");
+                        g.into_iter().for_each(|(kix, k, _)| {
+                            let line = format!("        {} [ label=\"{}\" ];\n", kix.index(), k);
+                            s.push_str(&line);
+                        });
+                        s.push_str("    }\n\n");
+                    }
+                    _ => g.into_iter().for_each(|(kix, k, _)| {
+                        let line = format!("    {} [ label=\"{}\" ]\n", kix.index(), k);
+                        s.push_str(&line);
+                    }),
+                }
+            })
     }
 
     /// Hone in on specific Kanji families.

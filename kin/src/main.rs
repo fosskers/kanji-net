@@ -1,6 +1,6 @@
 use gumdrop::{Options, ParsingStyle};
 use kanji::exam_lists::*;
-use kn_core::{Entry, Error, Kanji, Level};
+use kn_core::{DotMode, Entry, Error, Kanji, Level};
 use std::collections::HashMap;
 use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
@@ -157,7 +157,7 @@ fn graph_dot(path: &Path, ks: Vec<Kanji>) -> Result<(), Error> {
     let dot = if ks.is_empty() {
         db.dot()
     } else {
-        db.dot_custom(&db.filtered_graph(ks))
+        db.dot_custom(DotMode::Groups, &db.filtered_graph(ks))
     };
 
     println!("{}", dot);
