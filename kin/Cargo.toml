@@ -12,7 +12,7 @@ kn-core = { path = "../kn-core" }
 [dependencies.kanji]
 version = "1.1"
 git = "https://github.com/fosskers/rs-kanji"
-rev = "c6508cedd5b57aecd62d37933e13aef7a22c8cf8"
+rev = "85efb94b0f75a4c7bd214bc99ee99717b469f808"
 features = ["serde"]
 
 [profile.release]
