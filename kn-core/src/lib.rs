@@ -193,6 +193,7 @@ impl DB {
 
     /// Same as `dot`, but supply your own graph to consider.
     pub fn dot_custom(&self, dot_mode: DotMode, chosen: HashSet<Kanji>, graph: &KGraph) -> String {
+        let levels = kanji::level_table();
         let mut s = String::new();
         s.push_str("digraph {\n");
 
@@ -200,12 +201,12 @@ impl DB {
             graph
                 .node_weight(kix)
                 .and_then(|k| self.entries.get(k))
-                .map(|e| (kix, e.kanji, e.onyomi.first()))
+                .map(|e| (kix, e.kanji, e.onyomi.first(), levels.get(&e.kanji)))
         });
 
         match dot_mode {
             DotMode::Groups => DB::with_groups(&chosen, &mut s, filtered),
-            DotMode::NoGroups => filtered.for_each(|(kix, k, _)| {
+            DotMode::NoGroups => filtered.for_each(|(kix, k, _, _)| {
                 let shape = DB::shape(&chosen, &k);
                 let line = format!("    {} [ label=\"{}\", shape={} ]\n", kix.index(), k, shape);
                 s.push_str(&line);
@@ -240,7 +241,7 @@ impl DB {
 
     fn with_groups<'a, F>(chosen: &HashSet<Kanji>, s: &mut String, filtered: F)
     where
-        F: Iterator<Item = (NodeIndex<u16>, Kanji, Option<&'a String>)>,
+        F: Iterator<Item = (NodeIndex<u16>, Kanji, Option<&'a String>, Option<&'a Level>)>,
     {
         filtered
             .sorted_by(|a, b| a.2.cmp(&b.2))
@@ -259,22 +260,30 @@ impl DB {
                         s.push_str("        style=dashed;\n");
                         s.push_str("        color=brown;\n");
                         s.push_str("\n");
-                        g.into_iter().for_each(|(kix, k, _)| {
+                        g.into_iter().for_each(|(kix, k, _, l)| {
                             let shape = DB::shape(chosen, &k);
                             let line = format!(
-                                "        {} [ label=\"{}\", shape={} ];\n",
+                                "        {} [ label=<{}{}>, shape={} ];\n",
                                 kix.index(),
                                 k,
+                                l.map(|x| format!("<br/><font point-size=\"8\">{}</font>", x))
+                                    .unwrap_or_else(|| "".to_string()),
                                 shape
                             );
                             s.push_str(&line);
                         });
                         s.push_str("    }\n\n");
                     }
-                    _ => g.into_iter().for_each(|(kix, k, _)| {
+                    _ => g.into_iter().for_each(|(kix, k, _, l)| {
                         let shape = DB::shape(chosen, &k);
-                        let line =
-                            format!("    {} [ label=\"{}\", shape={} ]\n", kix.index(), k, shape);
+                        let line = format!(
+                            "    {} [ label=<{}{}>, shape={} ]\n",
+                            kix.index(),
+                            k,
+                            l.map(|x| format!("<br/><font point-size=\"8\">{}</font>", x))
+                                .unwrap_or_else(|| "".to_string()),
+                            shape
+                        );
                         s.push_str(&line);
                     }),
                 }
