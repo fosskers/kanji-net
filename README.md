@@ -1,6 +1,6 @@
 # KanjiNet
 
-![](gou.png)
+![](shimesu.png)
 
 ## Derivation Rules
 
