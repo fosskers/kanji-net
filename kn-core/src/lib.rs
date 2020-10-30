@@ -363,6 +363,8 @@ pub struct Entry {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub oya: Vec<Kanji>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kakushi_oya: Vec<Kanji>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub onyomi: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub imi: Vec<(String, String)>,

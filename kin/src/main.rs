@@ -109,6 +109,12 @@ fn kanji_prompt() -> Result<Entry, Error> {
         .filter_map(Kanji::new)
         .collect();
 
+    let kakushi_oya: Vec<Kanji> = get_line(&in_handle, &mut out_handle, "隠し親")?
+        .split_whitespace()
+        .filter_map(|s| s.chars().next())
+        .filter_map(Kanji::new)
+        .collect();
+
     let kanji = get_legal_kanji(&in_handle, &mut out_handle, "漢字")?;
     let onyomi = get_line(&in_handle, &mut out_handle, "音読み")?
         .split_whitespace()
@@ -118,6 +124,7 @@ fn kanji_prompt() -> Result<Entry, Error> {
     let entry = Entry {
         kanji,
         oya,
+        kakushi_oya,
         onyomi,
         imi: vec![],
     };
