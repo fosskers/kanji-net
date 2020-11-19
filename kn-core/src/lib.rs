@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::path::Path;
-use std::time::SystemTimeError;
 
 /// The various errors that can occur while processing Kanji.
 #[derive(Debug)]
@@ -20,13 +19,15 @@ pub enum Error {
     /// Some lower-level error involving JSON (de)serialization.
     JSON(serde_json::Error),
     /// Some lower-level error involving time measurement.
-    Time(SystemTimeError),
+    Time(std::time::SystemTimeError),
     /// A given `Kanji` already exists in the database.
     Exists(Kanji),
     /// A given `Kanji` is missing from the database.
     Missing(Kanji),
     /// The given `String` does not represent a single `Kanji`.
     NotKanji(String),
+    /// Some other error.
+    Other(String),
 }
 
 impl std::fmt::Display for Error {
@@ -38,6 +39,7 @@ impl std::fmt::Display for Error {
             Error::Exists(k) => write!(f, "{} already has an entry in the database.", k.get()),
             Error::Missing(k) => write!(f, "{} is missing from the database.", k.get()),
             Error::NotKanji(s) => write!(f, "{} is not Kanji.", s),
+            Error::Other(s) => write!(f, "{}", s),
         }
     }
 }
@@ -51,6 +53,7 @@ impl std::error::Error for Error {
             Error::Exists(_) => None,
             Error::Missing(_) => None,
             Error::NotKanji(_) => None,
+            Error::Other(_) => None,
         }
     }
 }

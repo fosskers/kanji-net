@@ -1,8 +1,8 @@
 use gumdrop::{Options, ParsingStyle};
 use kanji::exam_lists::*;
 use kn_core::{DotMode, Entry, Error, Kanji, Level};
+use rustyline::Editor;
 use std::collections::HashMap;
-use std::io::{self, Stdin, Stdout, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -100,23 +100,23 @@ fn new_entry(path: &Path) -> Result<(), Error> {
 
 /// Prompt the user for the fields of an `Entry` to add to the database.
 fn kanji_prompt() -> Result<Entry, Error> {
-    let in_handle = io::stdin();
-    let mut out_handle = io::stdout();
+    let mut rl = Editor::<()>::new();
+    let _ = rl.load_history("history.txt");
 
-    let oya: Vec<Kanji> = get_line(&in_handle, &mut out_handle, "親")?
+    let oya: Vec<Kanji> = get_line(&mut rl, "親: ")?
         .split_whitespace()
         .filter_map(|s| s.chars().next())
         .filter_map(Kanji::new)
         .collect();
 
-    let kakushi_oya: Vec<Kanji> = get_line(&in_handle, &mut out_handle, "隠し親")?
+    let kakushi_oya: Vec<Kanji> = get_line(&mut rl, "隠し親: ")?
         .split_whitespace()
         .filter_map(|s| s.chars().next())
         .filter_map(Kanji::new)
         .collect();
 
-    let kanji = get_legal_kanji(&in_handle, &mut out_handle, "漢字")?;
-    let onyomi = get_line(&in_handle, &mut out_handle, "音読み")?
+    let kanji = get_legal_kanji(&mut rl, "漢字: ")?;
+    let onyomi = get_line(&mut rl, "音読み: ")?
         .split_whitespace()
         .map(|s| s.to_string())
         .collect();
@@ -129,31 +129,31 @@ fn kanji_prompt() -> Result<Entry, Error> {
         imi: vec![],
     };
 
+    rl.save_history("history.txt").unwrap();
+
     Ok(entry)
 }
 
-fn get_line(in_handle: &Stdin, out_handle: &mut Stdout, label: &str) -> Result<String, Error> {
-    let mut line = String::new();
-    print!("{}: ", label);
-    out_handle.flush().map_err(Error::IO)?;
-    in_handle.read_line(&mut line).map_err(Error::IO)?;
-    Ok(line.trim_end().to_string())
+fn get_line(rl: &mut Editor<()>, label: &str) -> Result<String, Error> {
+    match rl.readline(label) {
+        Ok(line) => {
+            rl.add_history_entry(&line);
+            Ok(line)
+        }
+        Err(_) => Err(Error::Other("CLI input failed.".to_string())),
+    }
 }
 
 /// Loop on the input of legal Kanji.
-fn get_legal_kanji(
-    in_handle: &Stdin,
-    out_handle: &mut Stdout,
-    label: &str,
-) -> Result<Kanji, Error> {
-    let line = get_line(in_handle, out_handle, label)?;
+fn get_legal_kanji(rl: &mut Editor<()>, label: &str) -> Result<Kanji, Error> {
+    let line = get_line(rl, label)?;
     let mut chars = line.chars();
 
     match chars.next().and_then(Kanji::new) {
         Some(k) => Ok(k),
         _ => {
             println!("Invalid input! Try again.");
-            get_legal_kanji(in_handle, out_handle, label)
+            get_legal_kanji(rl, label)
         }
     }
 }
