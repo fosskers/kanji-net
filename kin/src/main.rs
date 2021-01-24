@@ -60,8 +60,8 @@ struct Levels {
     help: bool,
 
     /// Kanji whose level you wish to inspect.
-    #[options(free, parse(try_from_str = "kanji_from_str"))]
-    kanji: Vec<Kanji>,
+    #[options(free)]
+    kanji: Vec<String>,
 }
 
 #[derive(Options)]
@@ -232,15 +232,18 @@ fn db_stats(path: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-fn levels(ks: Vec<Kanji>) {
+fn levels(ks: Vec<String>) {
     let table = kanji::level_table();
 
-    ks.iter().for_each(|k| {
-        table
-            .get(&k)
-            .into_iter()
-            .for_each(|l| println!("{}: {:?}", k, l))
-    })
+    ks.iter()
+        .flat_map(|s| s.chars())
+        .filter_map(Kanji::new)
+        .for_each(|k| {
+            table
+                .get(&k)
+                .into_iter()
+                .for_each(|l| println!("{}: {:?}", k, l))
+        })
 }
 
 fn next(path: &Path) -> Result<(), Error> {
