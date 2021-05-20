@@ -23,6 +23,10 @@
   - 「首族」：道、夏（頁は貝からなるとされる）
   - 「鳥族」：島、烏、梟
 
+## Kanji with unhelpful 部首
+
+- 垂→土
+
 ## Resources
 
 - https://www.aozora.gr.jp/kanji_table/touyoukanji_jitaihyou/
