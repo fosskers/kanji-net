@@ -16,7 +16,7 @@ struct Args {
     version: bool,
 
     /// Path to the Kanji data file.
-    #[options(meta = "PATH", default = "data.json")]
+    #[options(meta = "PATH", default = "/home/colin/code/rust/kanji-net/data.json")]
     data: PathBuf,
 
     #[options(command)]
