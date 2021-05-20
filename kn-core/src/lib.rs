@@ -58,6 +58,12 @@ impl std::error::Error for Error {
     }
 }
 
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::IO(error)
+    }
+}
+
 /// The relationship between parents and children, in terms of their readings.
 #[derive(Clone, Copy)]
 pub enum Inherit {

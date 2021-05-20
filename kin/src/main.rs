@@ -3,6 +3,7 @@ use kanji::exam_lists::*;
 use kn_core::{DotMode, Entry, Error, Kanji, Level};
 use rustyline::Editor;
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -44,6 +45,9 @@ struct Graph {
     /// Show this help message.
     help: bool,
 
+    #[options(meta = "PATH", default = "graph.png")]
+    output: PathBuf,
+
     /// Kanji whose families you wish to focus on.
     #[options(free, parse(try_from_str = "kanji_from_str"))]
     kanji: Vec<Kanji>,
@@ -77,7 +81,7 @@ fn main() -> Result<(), Error> {
             Ok(())
         }
         Some(Command::New(_)) => new_entry(&args.data),
-        Some(Command::Graph(g)) => graph_dot(&args.data, g.kanji),
+        Some(Command::Graph(g)) => graph_dot(&args.data, g),
         Some(Command::Stats(_)) => db_stats(&args.data),
         Some(Command::Levels(l)) => Ok(levels(l.kanji)),
         Some(Command::Next(_)) => next(&args.data),
@@ -158,8 +162,16 @@ fn get_legal_kanji(rl: &mut Editor<()>, label: &str) -> Result<Kanji, Error> {
     }
 }
 
-fn graph_dot(path: &Path, ks: Vec<Kanji>) -> Result<(), Error> {
+fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
+    let ks = g.kanji;
     let db = kn_core::open_db(path)?;
+    let mut child = std::process::Command::new("dot")
+        .arg("-Tpng")
+        .arg("-o")
+        .arg(g.output)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
 
     let dot = if ks.is_empty() {
         db.dot()
@@ -168,8 +180,16 @@ fn graph_dot(path: &Path, ks: Vec<Kanji>) -> Result<(), Error> {
         db.dot_custom(DotMode::Groups, chosen, &db.filtered_graph(ks))
     };
 
-    println!("{}", dot);
-    Ok(())
+    // Ensures that the handle to `stdin` drops and closes, avoiding a deadlock.
+    {
+        let mut stdin: std::process::ChildStdin = child.stdin.take().unwrap();
+        writeln!(stdin, "{}", dot)?; // FIXME Write the bytes directly?
+    }
+
+    match child.wait() {
+        Err(e) => Err(Error::from(e)),
+        Ok(_) => Ok(()),
+    }
 }
 
 fn kanji_from_str(s: &str) -> Result<Kanji, Error> {

@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 gumdrop = "0.8"
 kn-core = { path = "../kn-core" }
-rustyline = "7.1"
+rustyline = "8.1"
 
 # TODO Remove
 [dependencies.kanji]
