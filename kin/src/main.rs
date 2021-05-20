@@ -49,8 +49,8 @@ struct Graph {
     output: PathBuf,
 
     /// Kanji whose families you wish to focus on.
-    #[options(free, parse(try_from_str = "kanji_from_str"))]
-    kanji: Vec<Kanji>,
+    #[options(free, parse(from_str = "kanji_from_str"))]
+    kanji: Vec<Vec<Kanji>>,
 }
 
 /// Various statistics about the Kanji database.
@@ -163,7 +163,7 @@ fn get_legal_kanji(rl: &mut Editor<()>, label: &str) -> Result<Kanji, Error> {
 }
 
 fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
-    let ks = g.kanji;
+    let ks: Vec<Kanji> = g.kanji.into_iter().flatten().collect();
     let db = kn_core::open_db(path)?;
     let mut child = std::process::Command::new("dot")
         .arg("-Tpng")
@@ -192,11 +192,8 @@ fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
     }
 }
 
-fn kanji_from_str(s: &str) -> Result<Kanji, Error> {
-    s.chars()
-        .next()
-        .and_then(Kanji::new)
-        .ok_or(Error::NotKanji(s.to_string()))
+fn kanji_from_str(s: &str) -> Vec<Kanji> {
+    s.chars().filter_map(Kanji::new).collect()
 }
 
 fn db_stats(path: &Path) -> Result<(), Error> {
