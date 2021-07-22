@@ -2,7 +2,7 @@ use gumdrop::{Options, ParsingStyle};
 use kanji::exam_lists::*;
 use kn_core::{DotMode, Entry, Error, Kanji, Level};
 use rustyline::Editor;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -45,6 +45,10 @@ struct Graph {
     /// Show this help message.
     help: bool,
 
+    /// Search via the given Kanji's parents, not the Kanji itself.
+    parents: bool,
+
+    /// Filepath to write the image to.
     #[options(meta = "PATH", default = "graph.png")]
     output: PathBuf,
 
@@ -162,9 +166,12 @@ fn get_legal_kanji(rl: &mut Editor<()>, label: &str) -> Result<Kanji, Error> {
     }
 }
 
+// FIXME This should use `NESet` from the get-go.
 fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
     let ks: Vec<Kanji> = g.kanji.into_iter().flatten().collect();
     let db = kn_core::open_db(path)?;
+
+    // Note: This demonstrates how to do shell piping from within Rust.
     let mut child = std::process::Command::new("dot")
         .arg("-Tpng")
         .arg("-o")
@@ -176,8 +183,21 @@ fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
     let dot = if ks.is_empty() {
         db.dot()
     } else {
-        let chosen = ks.iter().copied().collect();
-        db.dot_custom(DotMode::Groups, chosen, &db.filtered_graph(ks))
+        // The kanji we should specially highlight in the final graph.
+        let highlight_by: HashSet<Kanji> = ks.iter().copied().collect();
+
+        // The kanji by which we filter the graph down.
+        let hone_by = if g.parents {
+            ks.iter()
+                .filter_map(|k| db.entries.get(k).map(|e| e.oya.iter()))
+                .flatten()
+                .copied()
+                .collect()
+        } else {
+            ks
+        };
+
+        db.dot_custom(DotMode::Groups, highlight_by, &db.filtered_graph(hone_by))
     };
 
     // Ensures that the handle to `stdin` drops and closes, avoiding a deadlock.
