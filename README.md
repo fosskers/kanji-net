@@ -26,6 +26,8 @@
 ## Kanji with unhelpful 部首
 
 - 垂 → 土
+- 年 → 干
+- 束 → 木
 
 ## Areas of Exploration
 
