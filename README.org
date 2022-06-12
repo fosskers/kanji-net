@@ -45,6 +45,8 @@
 + 年 → 干
 + 束 → 木
 + 兼 → 八
++ 鼓 → 鼓
++ 酒 → 酉
 
 * Areas of Exploration
 
