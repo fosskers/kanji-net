@@ -4,11 +4,13 @@
 
 * 目次 :TOC_2_gh:
 - [[#部首と同違う][部首と同違う？]]
+  - [[#部首は返って役に立たない][部首は返って役に立たない]]
 - [[#derivation-rules][Derivation Rules]]
   - [[#普段の規則][普段の規則]]
   - [[#やや珍しい継承方][やや珍しい継承方]]
 - [[#当てにならない部首][当てにならない部首]]
 - [[#areas-of-exploration][Areas of Exploration]]
+- [[#questions-and-queries][Questions and Queries]]
 - [[#resources][Resources]]
 
 * 部首と同違う？
@@ -17,6 +19,12 @@
   の考え方では基本的に字は自分の親に決してなれない。
 + 下記の通り、正式な部首が参考にも学者にも全く役に立たない部首が少なくはないため、
   「親子の関係」で考えた方が得策とされている。
+
+** 部首は返って役に立たない
+
+You need to look in completely different sections of a 漢字辞書 to find:
+
++ 畜と蓄
 
 * Derivation Rules
 
@@ -48,10 +56,16 @@
 + 鼓 → 鼓
 + 酒 → 酉
 + 「帰 → 巾」だが「婦 → 女」
++ 「致 → 至」だが「到 → リ」
++ 「哀 → 口」たが「衰 → 衣」
 
 * Areas of Exploration
 
 + 「气」と「監」のあの”二みたいな部分”
+
+* Questions and Queries
+
++ Which children are in a harder 級 than their simpler parents?
 
 * Resources
 
