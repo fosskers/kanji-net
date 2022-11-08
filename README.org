@@ -62,6 +62,7 @@ You need to look in completely different sections of a 漢字辞書 to find:
 * Areas of Exploration
 
 + 「气」と「監」のあの”二みたいな部分”
++ Rhyming: 湾・蛮、変・恋
 
 * Questions and Queries
 
