@@ -4,7 +4,7 @@
 
 * 目次 :TOC_2_gh:
 - [[#部首と同違う][部首と同違う？]]
-  - [[#部首は返って役に立たない][部首は返って役に立たない]]
+  - [[#部首は却って役に立たない][部首は却って役に立たない]]
 - [[#derivation-rules][Derivation Rules]]
   - [[#普段の規則][普段の規則]]
   - [[#やや珍しい継承方][やや珍しい継承方]]
@@ -20,11 +20,14 @@
 + 下記の通り、正式な部首が参考にも学者にも全く役に立たない部首が少なくはないため、
   「親子の関係」で考えた方が得策とされている。
 
-** 部首は返って役に立たない
+** 部首は却って役に立たない
 
 You need to look in completely different sections of a 漢字辞書 to find:
 
 + 畜と蓄
++ 「帰 → 巾」だが「婦 → 女」
++ 「致 → 至」だが「到 → リ」
++ 「哀 → 口」たが「衰 → 衣」
 
 * Derivation Rules
 
@@ -55,9 +58,6 @@ You need to look in completely different sections of a 漢字辞書 to find:
 + 兼 → 八
 + 鼓 → 鼓
 + 酒 → 酉
-+ 「帰 → 巾」だが「婦 → 女」
-+ 「致 → 至」だが「到 → リ」
-+ 「哀 → 口」たが「衰 → 衣」
 
 * Areas of Exploration
 
