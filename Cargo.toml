@@ -3,4 +3,5 @@ members = ["kn-core", "kin"]
 
 [profile.release]
 lto = true
+strip = true
 panic = "abort"
