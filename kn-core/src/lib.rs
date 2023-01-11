@@ -376,7 +376,7 @@ pub struct Entry {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub onyomi: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub imi: Vec<(String, String)>,
+    pub daihyou: Vec<String>,
 }
 
 /// Open a data file and bring the whole "database" into memory.
@@ -395,11 +395,13 @@ pub fn write_db(path: &Path, db: DB) -> Result<(), Error> {
         .create(true)
         .open(path)
         .map_err(Error::IO)?;
+
     let mut entries = db
         .entries
         .into_iter()
         .map(|(_, v)| v)
         .collect::<Vec<Entry>>();
+
     entries.sort_by_key(|e| e.kanji);
     entries.iter_mut().for_each(|e| e.oya.sort());
     serde_json::to_writer_pretty(file, &entries).map_err(Error::JSON)

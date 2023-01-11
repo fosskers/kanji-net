@@ -130,12 +130,17 @@ fn kanji_prompt() -> Result<Entry, Error> {
         .map(|s| s.to_string())
         .collect();
 
+    let daihyou: Vec<String> = get_line(&mut rl, "代表: ")?
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect();
+
     let entry = Entry {
         kanji,
         oya,
         kakushi_oya,
         onyomi,
-        imi: vec![],
+        daihyou,
     };
 
     rl.save_history("history.txt").unwrap();
