@@ -8,7 +8,10 @@
 - [[#derivation-rules][Derivation Rules]]
   - [[#普段の規則][普段の規則]]
   - [[#やや珍しい継承方][やや珍しい継承方]]
-- [[#当てにならない部首][当てにならない部首]]
+- [[#部首例][部首例]]
+  - [[#当てにならない部首][当てにならない部首]]
+  - [[#諦めた部首][諦めた部首]]
+  - [[#これといった部首がない字][これといった部首がない字]]
 - [[#areas-of-exploration][Areas of Exploration]]
 - [[#questions-and-queries][Questions and Queries]]
 - [[#development][Development]]
@@ -51,7 +54,8 @@ You need to look in completely different sections of a 漢字辞書 to find:
   - 「首族」：道、夏（頁は貝からなるとされる）
   - 「鳥族」：島、烏、梟
 
-* 当てにならない部首
+* 部首例
+** 当てにならない部首
 
 + 垂 → 土
 + 年 → 干
@@ -60,6 +64,17 @@ You need to look in completely different sections of a 漢字辞書 to find:
 + 鼓 → 鼓
 + 酒 → 酉
 + 承 → 手
++ 丹 → チョン
++ 状 → 犬
+
+** 諦めた部首
+
++ 風→風
++ 革→革
+
+** これといった部首がない字
+
++ 夥
 
 * Areas of Exploration
 
@@ -67,6 +82,7 @@ You need to look in completely different sections of a 漢字辞書 to find:
 + Rhyming: 湾・蛮、変・恋
 + 「虚」と「並」のあの部分
 + 斡と幹の「𠦝＋人」は存在する！探せ。
++ 「命」の親は「令」なのか「叩」なのか
 
 * Questions and Queries
 
@@ -75,6 +91,7 @@ You need to look in completely different sections of a 漢字辞書 to find:
 * Development
 
 + Fix rhyming. 勅 should list as rhyming with 束.
++ Where is the level for 唖?
 
 * Resources
 
