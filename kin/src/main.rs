@@ -113,17 +113,18 @@ fn kanji_prompt() -> Result<Entry, Error> {
 
     let oya: Vec<Kanji> = get_line(&mut rl, "親: ")?
         .split_whitespace()
-        .filter_map(|s| s.chars().next())
+        .flat_map(|s| s.chars())
         .filter_map(Kanji::new)
         .collect();
 
     let kakushi_oya: Vec<Kanji> = get_line(&mut rl, "隠し親: ")?
         .split_whitespace()
-        .filter_map(|s| s.chars().next())
+        .flat_map(|s| s.chars())
         .filter_map(Kanji::new)
         .collect();
 
     let kanji = get_legal_kanji(&mut rl, "漢字: ")?;
+
     let onyomi = get_line(&mut rl, "音読み: ")?
         .split_whitespace()
         .map(|s| s.to_string())
@@ -301,11 +302,10 @@ fn next(path: &Path) -> Result<(), Error> {
         .chain(LEVEL_01.chars())
         .filter_map(kanji::Kanji::new)
         // TODO There must be an idiom for this.
-        .filter_map(|k| match db.entries.get(&k) {
+        .find_map(|k| match db.entries.get(&k) {
             None => Some(k),
             Some(_) => None,
         })
-        .next()
         .iter()
         .for_each(|k| println!("{}", k));
 
