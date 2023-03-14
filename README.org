@@ -14,6 +14,7 @@
   - [[#これといった部首がない字][これといった部首がない字]]
 - [[#areas-of-exploration][Areas of Exploration]]
 - [[#questions-and-queries][Questions and Queries]]
+- [[#faq][FAQ]]
 - [[#development][Development]]
 - [[#resources][Resources]]
 
@@ -31,7 +32,8 @@ You need to look in completely different sections of a 漢字辞書 to find:
 + 畜と蓄
 + 「帰 → 巾」だが「婦 → 女」
 + 「致 → 至」だが「到 → リ」
-+ 「哀 → 口」たが「衰 → 衣」
++ 「哀 → 口」だが「衰 → 衣」
++ 「頼 → 頁」だが「煩 → 火」
 
 * Derivation Rules
 
@@ -57,6 +59,8 @@ You need to look in completely different sections of a 漢字辞書 to find:
 * 部首例
 ** 当てにならない部首
 
+前もって知らなかったら、「これだろう」と先に思わない物。
+
 + 垂 → 土
 + 年 → 干
 + 束 → 木
@@ -66,6 +70,10 @@ You need to look in completely different sections of a 漢字辞書 to find:
 + 承 → 手
 + 丹 → チョン
 + 状 → 犬
++ 嗣 → 口
++ 累 → 糸
++ 既 → 旡（既しか使わない部首)
++ 牙 → 牙（牙しか使わない）
 
 ** 諦めた部首
 
@@ -87,6 +95,11 @@ You need to look in completely different sections of a 漢字辞書 to find:
 * Questions and Queries
 
 + Which children are in a harder 級 than their simpler parents?
+
+* FAQ
+
++ なぜ「頁」が親になっている？
+  - 「煩」があるから。
 
 * Development
 
