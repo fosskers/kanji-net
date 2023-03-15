@@ -1,6 +1,7 @@
 use gumdrop::{Options, ParsingStyle};
 use kanji::exam_lists::*;
-use kn_core::{DotMode, Entry, Error, Kanji, Level};
+use kn_core::{self as core, DotMode, Entry, Kanji, Level};
+use rustyline::history::{FileHistory, History};
 use rustyline::Editor;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
@@ -11,14 +12,11 @@ use std::time::SystemTime;
 struct Args {
     /// Show this help message.
     help: bool,
-
     /// Show the current version of `kin`.
     version: bool,
-
     /// Path to the Kanji data file.
     #[options(meta = "PATH", default = "/home/colin/code/rust/kanji-net/data.json")]
     data: PathBuf,
-
     #[options(command)]
     command: Option<Command>,
 }
@@ -44,14 +42,11 @@ struct New {}
 struct Graph {
     /// Show this help message.
     help: bool,
-
     /// Search via the given Kanji's parents, not the Kanji itself.
     parents: bool,
-
     /// Filepath to write the image to.
     #[options(meta = "PATH", default = "graph.png")]
     output: PathBuf,
-
     /// Kanji whose families you wish to focus on.
     #[options(free, parse(from_str = "kanji_from_str"))]
     kanji: Vec<Vec<Kanji>>,
@@ -66,7 +61,6 @@ struct Stats {}
 struct Levels {
     /// Show this help message.
     help: bool,
-
     /// Kanji whose level you wish to inspect.
     #[options(free)]
     kanji: Vec<String>,
@@ -74,6 +68,18 @@ struct Levels {
 
 #[derive(Options)]
 struct Next {}
+
+#[derive(Debug)]
+enum Error {
+    Core(core::Error),
+    Readline(rustyline::error::ReadlineError),
+}
+
+impl From<core::Error> for Error {
+    fn from(v: core::Error) -> Self {
+        Self::Core(v)
+    }
+}
 
 fn main() -> Result<(), Error> {
     let args = Args::parse_args_or_exit(ParsingStyle::AllOptions);
@@ -85,10 +91,10 @@ fn main() -> Result<(), Error> {
             Ok(())
         }
         Some(Command::New(_)) => new_entry(&args.data),
-        Some(Command::Graph(g)) => graph_dot(&args.data, g),
-        Some(Command::Stats(_)) => db_stats(&args.data),
+        Some(Command::Graph(g)) => graph_dot(&args.data, g).map_err(Error::Core),
+        Some(Command::Stats(_)) => db_stats(&args.data).map_err(Error::Core),
         Some(Command::Levels(l)) => Ok(levels(l.kanji)),
-        Some(Command::Next(_)) => next(&args.data),
+        Some(Command::Next(_)) => next(&args.data).map_err(Error::Core),
         None => Ok(()),
     }
 }
@@ -101,15 +107,17 @@ fn new_entry(path: &Path) -> Result<(), Error> {
     // On collision, the entry is put into the in-memory copy of the DB, but
     // never makes it to the on-disk version.
     match db.entries.insert(kanji, entry) {
-        Some(_) => Err(Error::Exists(kanji)),
-        None => kn_core::write_db(path, db),
+        Some(_) => Err(core::Error::Exists(kanji))?,
+        None => kn_core::write_db(path, db)?,
     }
+
+    Ok(())
 }
 
 /// Prompt the user for the fields of an `Entry` to add to the database.
 fn kanji_prompt() -> Result<Entry, Error> {
-    let mut rl = Editor::<()>::new();
-    let _ = rl.load_history("history.txt");
+    let mut rl = Editor::<(), FileHistory>::new().map_err(Error::Readline)?;
+    rl.load_history("history.txt").map_err(Error::Readline)?;
 
     let oya: Vec<Kanji> = get_line(&mut rl, "親: ")?
         .split_whitespace()
@@ -148,18 +156,24 @@ fn kanji_prompt() -> Result<Entry, Error> {
     Ok(entry)
 }
 
-fn get_line(rl: &mut Editor<()>, label: &str) -> Result<String, Error> {
+fn get_line<H>(rl: &mut Editor<(), H>, label: &str) -> Result<String, Error>
+where
+    H: History,
+{
     match rl.readline(label) {
         Ok(line) => {
-            rl.add_history_entry(&line);
+            rl.add_history_entry(&line).map_err(Error::Readline)?;
             Ok(line)
         }
-        Err(_) => Err(Error::Other("CLI input failed.".to_string())),
+        Err(_) => Err(core::Error::Other("CLI input failed.".to_string()))?,
     }
 }
 
 /// Loop on the input of legal Kanji.
-fn get_legal_kanji(rl: &mut Editor<()>, label: &str) -> Result<Kanji, Error> {
+fn get_legal_kanji<H>(rl: &mut Editor<(), H>, label: &str) -> Result<Kanji, Error>
+where
+    H: History,
+{
     let line = get_line(rl, label)?;
     let mut chars = line.chars();
 
@@ -173,7 +187,7 @@ fn get_legal_kanji(rl: &mut Editor<()>, label: &str) -> Result<Kanji, Error> {
 }
 
 // FIXME This should use `NESet` from the get-go.
-fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
+fn graph_dot(path: &Path, g: Graph) -> Result<(), core::Error> {
     let ks: Vec<Kanji> = g.kanji.into_iter().flatten().collect();
     let db = kn_core::open_db(path)?;
 
@@ -213,7 +227,7 @@ fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
     }
 
     match child.wait() {
-        Err(e) => Err(Error::from(e)),
+        Err(e) => Err(core::Error::from(e)),
         Ok(_) => Ok(()),
     }
 }
@@ -222,10 +236,10 @@ fn kanji_from_str(s: &str) -> Vec<Kanji> {
     s.chars().filter_map(Kanji::new).collect()
 }
 
-fn db_stats(path: &Path) -> Result<(), Error> {
+fn db_stats(path: &Path) -> Result<(), core::Error> {
     let now = SystemTime::now();
     let db = kn_core::open_db(path)?;
-    let micros = now.elapsed().map_err(Error::Time)?.as_micros();
+    let micros = now.elapsed().map_err(core::Error::Time)?.as_micros();
     let levels = db.levels();
 
     let pairs = vec![
@@ -289,7 +303,7 @@ fn levels(ks: Vec<String>) {
         })
 }
 
-fn next(path: &Path) -> Result<(), Error> {
+fn next(path: &Path) -> Result<(), core::Error> {
     let db = kn_core::open_db(path)?;
 
     LEVEL_10

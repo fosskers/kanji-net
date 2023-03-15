@@ -15,9 +15,9 @@ use std::path::Path;
 #[derive(Debug)]
 pub enum Error {
     /// Some lower-level error involving file IO.
-    IO(std::io::Error),
+    Io(std::io::Error),
     /// Some lower-level error involving JSON (de)serialization.
-    JSON(serde_json::Error),
+    Json(serde_json::Error),
     /// Some lower-level error involving time measurement.
     Time(std::time::SystemTimeError),
     /// A given `Kanji` already exists in the database.
@@ -33,8 +33,8 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::IO(e) => e.fmt(f),
-            Error::JSON(e) => e.fmt(f),
+            Error::Io(e) => e.fmt(f),
+            Error::Json(e) => e.fmt(f),
             Error::Time(e) => e.fmt(f),
             Error::Exists(k) => write!(f, "{} already has an entry in the database.", k.get()),
             Error::Missing(k) => write!(f, "{} is missing from the database.", k.get()),
@@ -47,8 +47,8 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::IO(e) => Some(e),
-            Error::JSON(e) => Some(e),
+            Error::Io(e) => Some(e),
+            Error::Json(e) => Some(e),
             Error::Time(e) => Some(e),
             Error::Exists(_) => None,
             Error::Missing(_) => None,
@@ -60,7 +60,7 @@ impl std::error::Error for Error {
 
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
-        Error::IO(error)
+        Error::Io(error)
     }
 }
 
@@ -381,8 +381,8 @@ pub struct Entry {
 
 /// Open a data file and bring the whole "database" into memory.
 pub fn open_db(path: &Path) -> Result<DB, Error> {
-    let raw = fs::read_to_string(path).map_err(Error::IO)?;
-    let ks: Vec<Entry> = serde_json::from_str(&raw).map_err(Error::JSON)?;
+    let raw = fs::read_to_string(path).map_err(Error::Io)?;
+    let ks: Vec<Entry> = serde_json::from_str(&raw).map_err(Error::Json)?;
     let hm = ks.into_iter().map(|e| (e.kanji, e)).collect();
 
     Ok(DB::new(hm))
@@ -394,7 +394,7 @@ pub fn write_db(path: &Path, db: DB) -> Result<(), Error> {
         .write(true)
         .create(true)
         .open(path)
-        .map_err(Error::IO)?;
+        .map_err(Error::Io)?;
 
     let mut entries = db
         .entries
@@ -404,5 +404,5 @@ pub fn write_db(path: &Path, db: DB) -> Result<(), Error> {
 
     entries.sort_by_key(|e| e.kanji);
     entries.iter_mut().for_each(|e| e.oya.sort());
-    serde_json::to_writer_pretty(file, &entries).map_err(Error::JSON)
+    serde_json::to_writer_pretty(file, &entries).map_err(Error::Json)
 }
