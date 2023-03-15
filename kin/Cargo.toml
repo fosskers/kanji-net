@@ -2,7 +2,7 @@
 name = "kin"
 version = "0.1.0"
 authors = ["Colin Woodbury <colin@fosskers.ca>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 gumdrop = "0.8"

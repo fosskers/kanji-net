@@ -223,7 +223,7 @@ impl DB {
         }
 
         // Gap between nodes and edges.
-        s.push_str("\n");
+        s.push('\n');
 
         // Write all the edges.
         graph.raw_edges().iter().for_each(|e| {
@@ -263,12 +263,12 @@ impl DB {
                 match yomi {
                     // Only bother grouping if there is more than one node in the group.
                     Some(y) if g.len() > 1 => {
-                        s.push_str("\n");
+                        s.push('\n');
                         s.push_str(&format!("    subgraph cluster_{} {{\n", y));
                         s.push_str(&format!("        label=\"{}\";\n", y));
                         s.push_str("        style=dashed;\n");
                         s.push_str("        color=brown;\n");
-                        s.push_str("\n");
+                        s.push('\n');
                         g.into_iter().for_each(|(kix, k, _, l)| {
                             let shape = DB::shape(chosen, &k);
                             let line = format!(
@@ -303,7 +303,7 @@ impl DB {
     pub fn filtered_graph(&self, ks: Vec<Kanji>) -> KGraph {
         let children: HashSet<_> = ks
             .iter()
-            .filter_map(|k| self.index.get(&k))
+            .filter_map(|k| self.index.get(k))
             .flat_map(|kix| self.all_children(*kix))
             .collect();
         let parents: HashSet<_> = ks.into_iter().flat_map(|k| self.all_parents(k)).collect();
@@ -361,7 +361,7 @@ impl DB {
                     .flatten()
                     .collect()
             })
-            .unwrap_or_else(|| HashSet::new())
+            .unwrap_or_else(HashSet::new)
     }
 }
 
@@ -396,13 +396,27 @@ pub fn write_db(path: &Path, db: DB) -> Result<(), Error> {
         .open(path)
         .map_err(Error::Io)?;
 
-    let mut entries = db
-        .entries
-        .into_iter()
-        .map(|(_, v)| v)
-        .collect::<Vec<Entry>>();
-
+    let mut entries = db.entries.into_values().collect::<Vec<Entry>>();
     entries.sort_by_key(|e| e.kanji);
     entries.iter_mut().for_each(|e| e.oya.sort());
     serde_json::to_writer_pretty(file, &entries).map_err(Error::Json)
+}
+
+/// Apply functions in method-position.
+pub trait Apply {
+    /// Apply a given function in method-position.
+    fn apply<F, U>(self, f: F) -> U
+    where
+        F: FnOnce(Self) -> U,
+        Self: Sized;
+}
+
+impl<T> Apply for T {
+    fn apply<F, U>(self, f: F) -> U
+    where
+        F: FnOnce(Self) -> U,
+        Self: Sized,
+    {
+        f(self)
+    }
 }

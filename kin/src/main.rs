@@ -88,15 +88,16 @@ fn main() -> Result<(), Error> {
         _ if args.version => {
             let version = env!("CARGO_PKG_VERSION");
             println!("{}", version);
-            Ok(())
         }
-        Some(Command::New(_)) => new_entry(&args.data),
-        Some(Command::Graph(g)) => graph_dot(&args.data, g).map_err(Error::Core),
-        Some(Command::Stats(_)) => db_stats(&args.data).map_err(Error::Core),
-        Some(Command::Levels(l)) => Ok(levels(l.kanji)),
-        Some(Command::Next(_)) => next(&args.data).map_err(Error::Core),
-        None => Ok(()),
+        Some(Command::New(_)) => new_entry(&args.data)?,
+        Some(Command::Graph(g)) => graph_dot(&args.data, g)?,
+        Some(Command::Stats(_)) => db_stats(&args.data)?,
+        Some(Command::Levels(l)) => levels(l.kanji),
+        Some(Command::Next(_)) => next(&args.data)?,
+        None => {}
     }
+
+    Ok(())
 }
 
 fn new_entry(path: &Path) -> Result<(), Error> {
@@ -151,7 +152,7 @@ fn kanji_prompt() -> Result<Entry, Error> {
         daihyou,
     };
 
-    rl.save_history("history.txt").unwrap();
+    rl.save_history("history.txt").map_err(Error::Readline)?;
 
     Ok(entry)
 }
@@ -221,6 +222,7 @@ fn graph_dot(path: &Path, g: Graph) -> Result<(), core::Error> {
     };
 
     // Ensures that the handle to `stdin` drops and closes, avoiding a deadlock.
+    // The `unwrap` here is on purpose and advertised in the definition of `stdin` itself.
     {
         let mut stdin: std::process::ChildStdin = child.stdin.take().unwrap();
         writeln!(stdin, "{}", dot)?; // FIXME Write the bytes directly?
@@ -320,11 +322,7 @@ fn next(path: &Path) -> Result<(), core::Error> {
         .chain(LEVEL_01_PRE.chars())
         .chain(LEVEL_01.chars())
         .filter_map(kanji::Kanji::new)
-        // TODO There must be an idiom for this.
-        .find_map(|k| match db.entries.get(&k) {
-            None => Some(k),
-            Some(_) => None,
-        })
+        .find(|k| db.entries.get(k).is_none())
         .iter()
         .for_each(|k| println!("{}", k));
 
