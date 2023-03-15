@@ -73,11 +73,30 @@ struct Next {}
 enum Error {
     Core(core::Error),
     Readline(rustyline::error::ReadlineError),
+    Io(std::io::Error),
+    /// Some lower-level error involving time measurement.
+    Time(std::time::SystemTimeError),
+    /// A given `Kanji` already exists in the database.
+    Exists(Kanji),
+    Other(&'static str),
 }
 
 impl From<core::Error> for Error {
     fn from(v: core::Error) -> Self {
         Self::Core(v)
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Io(e) => write!(f, "{e}"),
+            Error::Exists(k) => write!(f, "{} already has an entry in the database.", k.get()),
+            Error::Core(e) => write!(f, "{e}"),
+            Error::Readline(e) => write!(f, "{e}"),
+            Error::Time(e) => write!(f, "{e}"),
+            Error::Other(e) => write!(f, "{e}"),
+        }
     }
 }
 
@@ -108,7 +127,7 @@ fn new_entry(path: &Path) -> Result<(), Error> {
     // On collision, the entry is put into the in-memory copy of the DB, but
     // never makes it to the on-disk version.
     match db.entries.insert(kanji, entry) {
-        Some(_) => Err(core::Error::Exists(kanji))?,
+        Some(_) => Err(Error::Exists(kanji))?,
         None => kn_core::write_db(path, db)?,
     }
 
@@ -166,7 +185,7 @@ where
             rl.add_history_entry(&line).map_err(Error::Readline)?;
             Ok(line)
         }
-        Err(_) => Err(core::Error::Other("CLI input failed.".to_string()))?,
+        Err(_) => Err(Error::Other("CLI input failed."))?,
     }
 }
 
@@ -188,7 +207,7 @@ where
 }
 
 // FIXME This should use `NESet` from the get-go.
-fn graph_dot(path: &Path, g: Graph) -> Result<(), core::Error> {
+fn graph_dot(path: &Path, g: Graph) -> Result<(), Error> {
     let ks: Vec<Kanji> = g.kanji.into_iter().flatten().collect();
     let db = kn_core::open_db(path)?;
 
@@ -199,7 +218,8 @@ fn graph_dot(path: &Path, g: Graph) -> Result<(), core::Error> {
         .arg(g.output)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
-        .spawn()?;
+        .spawn()
+        .map_err(Error::Io)?;
 
     let dot = if ks.is_empty() {
         db.dot()
@@ -225,23 +245,21 @@ fn graph_dot(path: &Path, g: Graph) -> Result<(), core::Error> {
     // The `unwrap` here is on purpose and advertised in the definition of `stdin` itself.
     {
         let mut stdin: std::process::ChildStdin = child.stdin.take().unwrap();
-        writeln!(stdin, "{}", dot)?; // FIXME Write the bytes directly?
+        writeln!(stdin, "{}", dot).map_err(Error::Io)?; // FIXME Write the bytes directly?
     }
 
-    match child.wait() {
-        Err(e) => Err(core::Error::from(e)),
-        Ok(_) => Ok(()),
-    }
+    child.wait().map_err(Error::Io)?;
+    Ok(())
 }
 
 fn kanji_from_str(s: &str) -> Vec<Kanji> {
     s.chars().filter_map(Kanji::new).collect()
 }
 
-fn db_stats(path: &Path) -> Result<(), core::Error> {
+fn db_stats(path: &Path) -> Result<(), Error> {
     let now = SystemTime::now();
     let db = kn_core::open_db(path)?;
-    let micros = now.elapsed().map_err(core::Error::Time)?.as_micros();
+    let micros = now.elapsed().map_err(Error::Time)?.as_micros();
     let levels = db.levels();
 
     let pairs = vec![
