@@ -105,6 +105,7 @@ You need to look in completely different sections of a 漢字辞書 to find:
 
 + Fix rhyming. 勅 should list as rhyming with 束.
 + Where is the level for 唖?
++ Connect 燻 and 勲
 
 * Resources
 
