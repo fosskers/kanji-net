@@ -107,6 +107,7 @@ You need to look in completely different sections of a 漢字辞書 to find:
   - しょう and とう should rhyme.
 + Where is the level for 唖?
 + Connect 燻 and 勲
++ 奄 and 庵 should not have a red connection.
 
 * Resources
 
