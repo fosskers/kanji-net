@@ -77,8 +77,9 @@ You need to look in completely different sections of a 漢字辞書 to find:
 
 ** 諦めた部首
 
-+ 風→風
-+ 革→革
++ 風 → 風
++ 革 → 革
++ 麻 → 麻（麻しか使わない）
 
 ** これといった部首がない字
 
@@ -105,6 +106,7 @@ You need to look in completely different sections of a 漢字辞書 to find:
 
 + Fix rhyming. 勅 should list as rhyming with 束.
   - しょう and とう should rhyme.
+  - 古 and 居 should have a non-red connection based on K.
 + Where is the level for 唖?
 + Connect 燻 and 勲
 + 奄 and 庵 should not have a red connection.
