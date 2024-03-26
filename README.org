@@ -96,6 +96,7 @@ You need to look in completely different sections of a 漢字辞書 to find:
 * Questions and Queries
 
 + Which children are in a harder 級 than their simpler parents?
++ How many parents are in the same 級 as their children?
 
 * FAQ
 
@@ -110,6 +111,8 @@ You need to look in completely different sections of a 漢字辞書 to find:
 + Where is the level for 唖?
 + Connect 燻 and 勲
 + 奄 and 庵 should not have a red connection.
++ 異体字 pairs have to be linked together and counted in the same 級, without
+  affecting the overall count. Example: 顚・顛
 
 * Resources
 
